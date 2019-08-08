@@ -1,0 +1,68 @@
+diff --git a/packages/SystemUI/res/layout/mobile_signal_group.xml b/packages/SystemUI/res/layout/mobile_signal_group.xml
+index d910ad3..1be28a0 100644
+--- a/packages/SystemUI/res/layout/mobile_signal_group.xml
++++ b/packages/SystemUI/res/layout/mobile_signal_group.xml
+@@ -49,6 +49,13 @@
+     <FrameLayout
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content">
++
++        <ImageView
++            android:id="@+id/mobile_inout_type"
++            android:layout_width="wrap_content"
++            android:layout_height="8dp"
++            android:layout_gravity="top|left"
++            android:visibility="gone" />
+         <com.android.systemui.statusbar.AnimatedImageView
+             android:theme="@style/DualToneLightTheme"
+             android:id="@+id/mobile_signal"
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java b/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
+index 09beeb5..ae820b8 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
+@@ -1060,6 +1060,7 @@ public class SignalClusterViewEx
+         public boolean mRoaming;
+         private ImageView mMobileActivityIn;
+         private ImageView mMobileActivityOut;
++        private ImageView mMobileInOutType;
+         public boolean mActivityIn;
+         public boolean mActivityOut;
+ 
+@@ -1080,6 +1081,7 @@ public class SignalClusterViewEx
+             mMobileVolte    = root.findViewById(R.id.mobile_volte_dual);
+             mMobileActivityIn = root.findViewById(R.id.mobile_in);
+             mMobileActivityOut = root.findViewById(R.id.mobile_out);
++            mMobileInOutType = root.findViewById(R.id.mobile_inout_type);
+             mMobileCard = root.findViewById(R.id.mobile_card);
+             // TODO: Remove the 2 instances because now the drawable can handle darkness.
+             /*
+@@ -1105,6 +1107,8 @@ public class SignalClusterViewEx
+ 
+                 if (mLastMobileTypeId != mMobileTypeId) {
+                     mMobileType.setImageResource(mMobileTypeId);
++                    Log.d(TAG,"here set mMobileInOutType image resource");
++                    mMobileInOutType.setImageResource(mMobileTypeId);
+                     mLastMobileTypeId = mMobileTypeId;
+                 }
+ 
+@@ -1180,9 +1184,9 @@ public class SignalClusterViewEx
+             // SPRD: modify for bug847536.
+             mMobileType.setVisibility(mMobileTypeId != 0 ? View.VISIBLE : View.GONE);
+             mMobileRoaming.setVisibility(mRoaming ? View.VISIBLE : View.GONE);
+-            mMobileActivityIn.setVisibility(mMobileDataInOutId != 0 ? View.VISIBLE : View.GONE);
++            // mMobileActivityIn.setVisibility(mMobileDataInOutId != 0 ? View.VISIBLE : View.GONE);
+             // mMobileActivityOut.setVisibility(mActivityOut ? View.VISIBLE : View.GONE);
+-
++            mMobileInOutType.setVisibility(mMobileDataInOutId != 0 ? View.VISIBLE : View.GONE);
+             return mMobileVisible;
+         }
+ 
+@@ -1213,6 +1217,8 @@ public class SignalClusterViewEx
+                     DarkIconDispatcher.getTint(tintArea, mMobileActivityIn, tint));
+             setTint(mMobileActivityOut,
+                     DarkIconDispatcher.getTint(tintArea, mMobileActivityOut, tint));
++            setTint(mMobileInOutType, DarkIconDispatcher.getTint(tintArea, mMobileInOutType, tint));
++
+         }
+ 
+ 

@@ -1,0 +1,65 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+index b6c5a55..732c0ea 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+@@ -130,6 +130,11 @@ public class MobileSignalController extends SignalController<
+     private boolean mIsModemReciverRegistered;
+     /* @} */
+ 
++    private int mDisplayedSignalLevel = -1;
++    private final static int MESSAGE_DELAY_DECREASE_SIGNAL_LEVEL = 20;
++    private final static int DELAY_DECREASE_SIGNAL_LEVEL_TIME = 20 * 1000;
++    private static boolean mDescreaseSignalLevelDone = true;
++
+     private Handler mHandler = new Handler() {
+         @Override
+         public void handleMessage(Message msg) {
+@@ -150,6 +155,19 @@ public class MobileSignalController extends SignalController<
+                     /* @} */
+                     notifyListeners(mCallbackHandler);
+                     break;
++                case MESSAGE_DELAY_DECREASE_SIGNAL_LEVEL:
++                    mDescreaseSignalLevelDone = true;
++                    Log.d(mTag, "current level des ---end");
++                    if (mDisplayedSignalLevel == 3 && TelephonyManager.getNetworkClass(mDataNetType)
++                            == TelephonyManager.NETWORK_CLASS_3_G) {
++                        mDisplayedSignalLevel = 0;
++                    } else {
++                        mDisplayedSignalLevel--;
++                    }
++                    mPhone.getSignalStrength();
++                    updateTelephony();
++                    notifyListeners(mCallbackHandler);
++                    break;
+                 default:
+                     return;
+             }
+@@ -943,6 +961,28 @@ public class MobileSignalController extends SignalController<
+                 } else {
+                     mCurrentState.level = mSignalStrength.getLevel();
+                 }
++                boolean is3G = TelephonyManager.getNetworkClass(mDataNetType)
++                        == TelephonyManager.NETWORK_CLASS_3_G;
++                Log.d(mTag, "current level=" + mCurrentState.level + " show level="
++                        + mDisplayedSignalLevel + "is3G=" + is3G);
++                if (is3G && mCurrentState.level < 3) {
++                    mCurrentState.level = 0;
++                    Log.d(mTag, "current level is3G and < 3,set it to 0");
++                }
++                if (mCurrentState.level >= mDisplayedSignalLevel) {
++                    mDisplayedSignalLevel = mCurrentState.level;
++                } else {
++                    mCurrentState.level = mDisplayedSignalLevel;
++                    if (mDescreaseSignalLevelDone) {
++                        mDescreaseSignalLevelDone = false;
++                        Log.d(mTag, "current level des +++start");
++                        Message message = new Message();
++                        message.what = MESSAGE_DELAY_DECREASE_SIGNAL_LEVEL;
++                        mHandler.sendMessageDelayed(message, DELAY_DECREASE_SIGNAL_LEVEL_TIME);
++                    }
++                }
++            } else {
++                Log.d(mTag, "current connected=false,may update delay");
+             }
+         }
+         if (mEnableRefreshDataConnectionState) {

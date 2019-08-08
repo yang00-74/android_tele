@@ -1,0 +1,115 @@
+
+diff --git a/core/res/res/values/config_ex.xml b/core/res/res/values/config_ex.xml
+index bc376f4..d545f6b 100644
+--- a/core/res/res/values/config_ex.xml
++++ b/core/res/res/values/config_ex.xml
+@@ -145,4 +145,37 @@
+         <item>com.google.android.apps.youtube.mango</item>
+         <item>com.google.android.calculator</item>
+     </string-array>
++
++    <bool name="config_show_five_level_signal">true</bool>
++
++    <integer-array translatable="false" name="config_five_level_gsmDbmThresholds">
++        <item>-140</item>    <!-- SIGNAL_STRENGTH_NONE_OR_UNKNOWN -->
++        <item>-111</item>    <!-- SIGNAL_STRENGTH_POOR -->
++        <item>-106</item>    <!-- SIGNAL_STRENGTH_MODERATE -->
++        <item>-101</item>    <!-- SIGNAL_STRENGTH_GOOD -->
++        <item>-96</item>    <!-- SIGNAL_STRENGTH_GREAT -->
++        <item>-91</item>    <!-- SIGNAL_STRENGTH_BEST -->
++        <item>-44</item>
++    </integer-array>
++
++    <integer-array translatable="false" name="config_five_level_tdscdmaDbmThresholds">
++        <item>-140</item>    <!-- SIGNAL_STRENGTH_NONE_OR_UNKNOWN -->
++        <item>-119</item>    <!-- SIGNAL_STRENGTH_POOR -->
++        <item>-114</item>    <!-- SIGNAL_STRENGTH_MODERATE -->
++        <item>-109</item>    <!-- SIGNAL_STRENGTH_GOOD -->
++        <item>-104</item>    <!-- SIGNAL_STRENGTH_GREAT -->
++        <item>-99</item>    <!-- SIGNAL_STRENGTH_BEST -->
++        <item>-44</item>
++    </integer-array>
++
++    <integer-array translatable="false" name="config_five_level_lteDbmThresholds">
++        <item>-140</item>    <!-- SIGNAL_STRENGTH_NONE_OR_UNKNOWN -->
++        <item>-120</item>    <!-- SIGNAL_STRENGTH_POOR -->
++        <item>-115</item>    <!-- SIGNAL_STRENGTH_MODERATE -->
++        <item>-110</item>    <!-- SIGNAL_STRENGTH_GOOD -->
++        <item>-100</item>    <!-- SIGNAL_STRENGTH_GREAT -->
++        <item>0</item>    <!-- SIGNAL_STRENGTH_BEST -->
++        <item>0</item>
++    </integer-array>
++
+ </resources>
+diff --git a/core/res/res/values/symbols_ex.xml b/core/res/res/values/symbols_ex.xml
+index fd7c592..b17bfca 100644
+--- a/core/res/res/values/symbols_ex.xml
++++ b/core/res/res/values/symbols_ex.xml
+@@ -149,4 +149,10 @@
+   <!-- Face messages -->
+   <java-symbol type="string" name="face_name_template" />
+   <java-symbol type="array" name="config_power_gts_memory_app_list" />
++  <!--add for five level signal-->
++  <java-symbol type="bool" name="config_show_five_level_signal" />
++  <java-symbol type="array" name="config_five_level_lteDbmThresholds" />
++  <java-symbol type="array" name="config_five_level_tdscdmaDbmThresholds" />
++  <java-symbol type="array" name="config_five_level_gsmDbmThresholds" />
++
+ </resources>
+diff --git a/packages/SystemUI/res/drawable/stat_sys_signal_5_fully.xml b/packages/SystemUI/res/drawable/stat_sys_signal_5_fully.xml
+new file mode 100644
+index 0000000..e66e08f
+--- /dev/null
++++ b/packages/SystemUI/res/drawable/stat_sys_signal_5_fully.xml
+@@ -0,0 +1,28 @@
++<?xml version="1.0" encoding="utf-8"?>
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="14dp"
++    android:height="10dp"
++    android:viewportWidth="14"
++    android:viewportHeight="10">
++
++    <path
++        android:fillColor="#000000"
++        android:fillType="evenOdd"
++        android:pathData="M14,9.5c0,0.276-0.224,0.5-0.5,0.5h-1C12.224,10,12,9.776,12,9.5v-9 C12,0.224,12.224,0,12.5,0h1C13.776,0,14,0.224,14,0.5V9.5z" />
++    <path
++        android:fillColor="#000000"
++        android:fillType="evenOdd"
++        android:pathData="M11,9.5c0,0.276-0.224,0.5-0.5,0.5h-1C9.224,10,9,9.776,9,9.5v-7 C9,2.224,9.224,2,9.5,2h1C10.776,2,11,2.224,11,2.5V9.5z" />
++    <path
++        android:fillColor="#000000"
++        android:fillType="evenOdd"
++        android:pathData="M8,9.5C8,9.776,7.776,10,7.5,10h-1C6.224,10,6,9.776,6,9.5v-5 C6,4.224,6.224,4,6.5,4h1C7.776,4,8,4.224,8,4.5V9.5z" />
++    <path
++        android:fillColor="#000000"
++        android:fillType="evenOdd"
++        android:pathData="M5,9.5C5,9.776,4.776,10,4.5,10h-1C3.224,10,3,9.776,3,9.5v-3 C3,6.224,3.224,6,3.5,6h1C4.776,6,5,6.224,5,6.5V9.5z" />
++    <path
++        android:fillColor="#000000"
++        android:fillType="evenOdd"
++        android:pathData="M2,9.5C2,9.776,1.776,10,1.5,10h-1C0.224,10,0,9.776,0,9.5v-1 C0,8.224,0.224,8,0.5,8h1C1.776,8,2,8.224,2,8.5V9.5z" />
++</vector>
+\ No newline at end of file
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java
+index ff51050..8a5963a 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java
+@@ -25,6 +25,7 @@ public class TelephonyIconsEx {
+     public static final int ICON_SIGNAL_TWO = R.drawable.stat_sys_signal_2_fully;
+     public static final int ICON_SIGNAL_THREE = R.drawable.stat_sys_signal_3_fully;
+     public static final int ICON_SIGNAL_FOUR = R.drawable.stat_sys_signal_4_fully;
++    public static final int ICON_SIGNAL_FIVE = R.drawable.stat_sys_signal_5_fully;
+     public static final int ICON_CARRIER_NETWORK_CHANGE =
+             R.drawable.stat_sys_signal_carrier_network_change_animation;
+ 
+@@ -58,7 +59,8 @@ public class TelephonyIconsEx {
+         ICON_SIGNAL_ONE,
+         ICON_SIGNAL_TWO,
+         ICON_SIGNAL_THREE,
+-        ICON_SIGNAL_FOUR
++        ICON_SIGNAL_FOUR,
++        ICON_SIGNAL_FIVE
+     };
+     /* @} */
+ }

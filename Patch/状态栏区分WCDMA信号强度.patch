@@ -1,0 +1,40 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+index adcbc4b..002e70b 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+@@ -785,6 +785,13 @@ public class MobileSignalController extends SignalController<
+                     mCurrentState.level = mSignalStrength.getCdmaLevel();
+                 } else {
+                     mCurrentState.level = mSignalStrength.getLevel();
++                    if (DEBUG) {
++                        Log.d(mTag , "NetworkClass=" + TelephonyManager.getNetworkClass(mServiceState.getNetworkType()));
++                    }
++                    if (TelephonyManager.NETWORK_CLASS_3_G
++                            == TelephonyManager.getNetworkClass(mServiceState.getNetworkType())) {
++                        mCurrentState.level = getWcdmaLevel();
++                    }
+                 }
+             }
+         }
+@@ -831,6 +838,21 @@ public class MobileSignalController extends SignalController<
+         notifyListenersIfNecessary();
+     }
+ 
++    public int getWcdmaLevel() {
++        int wcdmaLevel;
++
++        int gsmDbm = mSignalStrength.getGsmDbm();
++        if (gsmDbm >= -85) wcdmaLevel = SignalStrength.SIGNAL_STRENGTH_GREAT;
++        else if (gsmDbm >= -94) wcdmaLevel = SignalStrength.SIGNAL_STRENGTH_GOOD;
++        else if (gsmDbm >= -102) wcdmaLevel = SignalStrength.SIGNAL_STRENGTH_MODERATE;
++        else if (gsmDbm >= -107) wcdmaLevel = SignalStrength.SIGNAL_STRENGTH_POOR;
++        else wcdmaLevel = SignalStrength.SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++        if (DEBUG) {
++            Log.d(mTag , "wcdmaLevel=" + wcdmaLevel);
++        }
++        return wcdmaLevel;
++    }
++
+     private boolean isDataDisabled() {
+         return !mPhone.getDataEnabled(mSubscriptionInfo.getSubscriptionId());
+     }

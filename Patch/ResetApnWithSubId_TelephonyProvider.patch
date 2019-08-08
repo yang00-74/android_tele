@@ -1,0 +1,17 @@
+diff --git a/src/com/android/providers/telephony/TelephonyProvider.java b/src/com/android/providers/telephony/TelephonyProvider.java
+index 7cf7d9d..c3df990 100644
+--- a/src/com/android/providers/telephony/TelephonyProvider.java
++++ b/src/com/android/providers/telephony/TelephonyProvider.java
+@@ -2662,9 +2662,10 @@ public class TelephonyProvider extends ContentProvider
+             return;
+         }
+         /* @} */
+-
++        String where = "sub_id=" + subId;
++        log("restoreDefaultAPN: where: " + where);
+         try {
+-            db.delete(CARRIERS_TABLE, null, null);
++            db.delete(CARRIERS_TABLE, where, null);
+         } catch (SQLException e) {
+             loge("got exception when deleting to restore: " + e);
+         }

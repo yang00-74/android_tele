@@ -1,0 +1,35 @@
+diff --git a/packages/SystemUI/res/values/strings.xml b/packages/SystemUI/res/values/strings.xml
+index a111431..752f4f5 100644
+--- a/packages/SystemUI/res/values/strings.xml
++++ b/packages/SystemUI/res/values/strings.xml
+@@ -2060,5 +2060,7 @@
+     <string name="critical_battery_dialog_message">"The battery level is less than 5% and the device may shut down in the case of low charging"</string>
+     <!-- SPRD: new feature of showing memory tip [CHAR LIMIT=NONE] -->
+     <string name="recent_app_clean_finished_toast">Release <xliff:g id="count">%1$s</xliff:g> memory,<xliff:g id="count">%2$s</xliff:g> available now.</string>
++    <string name="quick_settings_volte1">"Volte1"</string>
++    <string name="quick_settings_volte2">"Volte2"</string>
++    <string name="turn_off_ims_error">Can not turn off IMS when WiFi calling enabled, please turn off WiFi calling first.</string>
+ 
+ </resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tileimpl/QSFactoryImpl.java b/packages/SystemUI/src/com/android/systemui/qs/tileimpl/QSFactoryImpl.java
+index 311b303..bd72a1d 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tileimpl/QSFactoryImpl.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/tileimpl/QSFactoryImpl.java
+@@ -48,6 +48,8 @@ import com.android.systemui.qs.tiles.NightDisplayTile;
+ import com.android.systemui.qs.tiles.RotationLockTile;
+ import com.android.systemui.qs.tiles.SuperBatteryTile;
+ import com.android.systemui.qs.tiles.UserTile;
++import com.android.systemui.qs.tiles.VolteTile1;
++import com.android.systemui.qs.tiles.VolteTile2;
+ import com.android.systemui.qs.tiles.WifiTile;
+ import com.android.systemui.qs.tiles.WorkModeTile;
+ import com.android.systemui.R;
+@@ -100,6 +102,8 @@ public class QSFactoryImpl implements QSFactory {
+         else if (tileSpec.equals("saver")) return new DataSaverTile(mHost);
+         else if (tileSpec.equals("night")) return new NightDisplayTile(mHost);
+         else if (tileSpec.equals("nfc")) return new NfcTile(mHost);
++        else if (tileSpec.equals("volte1")) return new VolteTile1(mHost);
++        else if (tileSpec.equals("volte2")) return new VolteTile2(mHost);
+         /* SPRD: add for Bug845301.@{ */
+         else if (SystemUIPluginUtils.getInstance(mHost.getContext()) != null
+                  && SystemUIPluginUtils.getInstance(mHost.getContext()).showExtraTile(tileSpec)) {

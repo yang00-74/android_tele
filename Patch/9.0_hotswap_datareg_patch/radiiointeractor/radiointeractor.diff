@@ -1,0 +1,192 @@
+diff --git a/common/src/com/android/sprd/telephony/IRadioInteractor.aidl b/common/src/com/android/sprd/telephony/IRadioInteractor.aidl
+index b7062bb..f401462 100644
+--- a/common/src/com/android/sprd/telephony/IRadioInteractor.aidl
++++ b/common/src/com/android/sprd/telephony/IRadioInteractor.aidl
+@@ -35,4 +35,5 @@ interface IRadioInteractor
+     String getRadioPreference(int PhoneId, String key);
+     void setRadioPreference(int phoneId, String key, String value);
+     int getPreferredNetworkType(int phoneId);
++    void enableRadioPowerFallback(boolean enable, int phoneId);
+ }
+diff --git a/common/src/com/android/sprd/telephony/RIConstants.java b/common/src/com/android/sprd/telephony/RIConstants.java
+index e1905aa..7293993 100644
+--- a/common/src/com/android/sprd/telephony/RIConstants.java
++++ b/common/src/com/android/sprd/telephony/RIConstants.java
+@@ -103,6 +103,8 @@ public interface RIConstants {
+     int RI_REQUEST_QUERY_FACILITY_LOCK_EXT = RI_REQUEST_BASE + 92;
+     int RI_REQUEST_GET_IMS_REGADDR = RI_REQUEST_BASE + 93;
+     int RI_REQUEST_GET_PREFERRED_NETWORK_TYPE = RI_REQUEST_BASE + 94;
++    int RI_REQUEST_ENABLE_RADIO_POWER_FALLBACK = RI_REQUEST_BASE + 95;
++    int RI_REQUEST_GET_ICCID = RI_REQUEST_BASE + 96;
+ 
+     int RI_UNSOL_RESPONSE_BASE = 5000;
+     int RI_UNSOL_VIDEOPHONE_CODEC = RI_UNSOL_RESPONSE_BASE + 0;
+diff --git a/common/src/com/android/sprd/telephony/RadioInteractor.java b/common/src/com/android/sprd/telephony/RadioInteractor.java
+index a06f994..885a894 100644
+--- a/common/src/com/android/sprd/telephony/RadioInteractor.java
++++ b/common/src/com/android/sprd/telephony/RadioInteractor.java
+@@ -1227,4 +1227,25 @@ public class RadioInteractor {
+         return -1;
+     }
+ 
++    public void enableRadioPowerFallback(boolean enable, int phoneId) {
++        try {
++            RadioInteractorHandler rih = getRadioInteractorHandler(phoneId);
++            if (rih != null) {
++                rih.enableRadioPowerFallback(enable);
++            } else {
++                if (mRadioInteractorProxy != null) {
++                    mRadioInteractorProxy.enableRadioPowerFallback(enable, phoneId);
++                }
++            }
++        } catch (RemoteException e) {
++            e.printStackTrace();
++        }
++    }
++
++    public void getIccId(Message result, int phoneId) {
++        RadioInteractorHandler rih = getRadioInteractorHandler(phoneId);
++        if (rih != null) {
++            rih.getIccId(result);
++        }
++    }
+ }
+diff --git a/common/src/com/android/sprd/telephony/RadioInteractorCore.java b/common/src/com/android/sprd/telephony/RadioInteractorCore.java
+index 3df8ac2..06939f2 100644
+--- a/common/src/com/android/sprd/telephony/RadioInteractorCore.java
++++ b/common/src/com/android/sprd/telephony/RadioInteractorCore.java
+@@ -2521,6 +2521,43 @@ public class RadioInteractorCore{
+         }
+     }
+ 
++    public void enableRadioPowerFallback(boolean enabled, Message result) {
++        IExtRadio extRadioProxy = getExtRadioProxy(result);
++        if (extRadioProxy != null) {
++            RIRequest rr = obtainRequest(RI_REQUEST_ENABLE_RADIO_POWER_FALLBACK, result,
++                    mRILDefaultWorkSource);
++
++            if (DBG) {
++                UtilLog.logd(TAG, rr.serialString() + "> " + requestToString(rr.mRequest)
++                        + " enabled = " + enabled);
++            }
++
++            try {
++                extRadioProxy.setRadioPowerFallback(rr.mSerial, enabled);
++            } catch (RemoteException | RuntimeException e) {
++                handleRadioProxyExceptionForRR(rr, "setRadioPowerFallback", e);
++            }
++        }
++    }
++
++    public void getIccId(Message result) {
++        IExtRadio extRadioProxy = getExtRadioProxy(result);
++        if (extRadioProxy != null) {
++            RIRequest rr = obtainRequest(RI_REQUEST_GET_ICCID, result,
++                    mRILDefaultWorkSource);
++
++            if (DBG) {
++                UtilLog.logd(TAG, rr.serialString() + "> " + requestToString(rr.mRequest));
++            }
++
++            try {
++                extRadioProxy.getICCID(rr.mSerial);
++            } catch (RemoteException | RuntimeException e) {
++                handleRadioProxyExceptionForRR(rr, "getIccId", e);
++            }
++        }
++    }
++
+     void notifyRegistrantsRilConnectionChanged(int rilVer) {
+         mRilVersion = rilVer;
+         if (mUnsolRIConnectedRegistrants != null) {
+@@ -3154,6 +3191,10 @@ public class RadioInteractorCore{
+                 return "REQUEST_GET_IMS_REGADDR";
+             case RI_REQUEST_GET_PREFERRED_NETWORK_TYPE:
+                 return "REQUEST_GET_PREFERRED_NETWORK_TYPE";
++            case RI_REQUEST_ENABLE_RADIO_POWER_FALLBACK:
++                return "REQUEST_ENABLE_RADIO_POWER_FALLBACK";
++            case RI_REQUEST_GET_ICCID:
++                return "REQUEST_GET_ICCID";
+             default:
+                 return "<unknown request>";
+          }
+diff --git a/common/src/com/android/sprd/telephony/RadioInteractorHandler.java b/common/src/com/android/sprd/telephony/RadioInteractorHandler.java
+index b148a8e..a2ae15d 100644
+--- a/common/src/com/android/sprd/telephony/RadioInteractorHandler.java
++++ b/common/src/com/android/sprd/telephony/RadioInteractorHandler.java
+@@ -91,7 +91,7 @@ public class RadioInteractorHandler extends Handler {
+     protected static final int EVENT_GET_RADIO_PREFERENCE_DONE = 40;
+     protected static final int EVENT_SET_RADIO_PREFERENCE_DONE = 41;
+     protected static final int EVENT_GET_PREFERRED_NETWORK_TYPE_DONE = 42;
+-
++    protected static final int EVENT_REQUEST_ENABLE_RADIO_POWER_FALLBACK = 43;
+     protected static final int EVENT_UNSOL_RADIOINTERACTOR = 100;
+     /**
+      *  Listen for update the list of embms programs.
+@@ -569,6 +569,16 @@ public class RadioInteractorHandler extends Handler {
+         Message response = mHandler.obtainMessage(EVENT_REQUEST_SET_SIM_POWER);
+         mRadioInteractorCore.setSimPowerReal(enabled, response);
+     }
++
++    public void enableRadioPowerFallback(boolean enable) {
++        Message response = mHandler.obtainMessage(EVENT_REQUEST_ENABLE_RADIO_POWER_FALLBACK);
++        mRadioInteractorCore.enableRadioPowerFallback(enable, response);
++    }
++
++    public void getIccId(Message result) {
++        mRadioInteractorCore.getIccId(result);
++    }
++
+     class SyncHandler extends Handler {
+         SyncHandler(Looper looper) {
+             super(looper);
+@@ -1145,6 +1155,15 @@ public class RadioInteractorHandler extends Handler {
+                         request.notifyAll();
+                     }
+                     break;
++                case EVENT_REQUEST_ENABLE_RADIO_POWER_FALLBACK:
++                    ar = (AsyncResult) msg.obj;
++                    UtilLog.logd(TAG, "handleMessage EVENT_REQUEST_ENABLE_RADIO_POWER_FALLBACK");
++                    if (ar.exception == null) {
++                        UtilLog.logd(TAG, "enableRadioPowerFallback :success");
++                    } else {
++                        UtilLog.loge(TAG, "enableRadioPowerFallback :fail" + ar.exception);
++                    }
++                    break;
+                 default:
+                     throw new RuntimeException("Unrecognized request event radiointeractor: " + msg.what);
+             }
+diff --git a/common/src/com/android/sprd/telephony/RadioInteractorProxy.java b/common/src/com/android/sprd/telephony/RadioInteractorProxy.java
+index 9ca7dd9..f005870 100644
+--- a/common/src/com/android/sprd/telephony/RadioInteractorProxy.java
++++ b/common/src/com/android/sprd/telephony/RadioInteractorProxy.java
+@@ -284,4 +284,10 @@ public class RadioInteractorProxy extends IRadioInteractor.Stub {
+         return -1;
+     }
+ 
++    public void enableRadioPowerFallback(boolean enable, int phoneId) {
++        UtilLog.logd(TAG,"enableRadioPowerFallback checkHandlerValid "+ checkHandlerValid(phoneId));
++        if (checkHandlerValid(phoneId)) {
++            mRadioInteractorHandler[phoneId].enableRadioPowerFallback(enable);
++        }
++    }
+ }
+diff --git a/common/src/com/android/sprd/telephony/RadioResponseEx.java b/common/src/com/android/sprd/telephony/RadioResponseEx.java
+index 43c21b7..9025400 100644
+--- a/common/src/com/android/sprd/telephony/RadioResponseEx.java
++++ b/common/src/com/android/sprd/telephony/RadioResponseEx.java
+@@ -423,6 +423,14 @@ public class RadioResponseEx extends IExtRadioResponse.Stub {
+         responseInts(responseInfo, nwType);
+     }
+ 
++    public void setRadioPowerFallbackResponse(RadioResponseInfo responseInfo) {
++        responseVoid(responseInfo);
++    }
++
++    public void getICCIDResponse(RadioResponseInfo responseInfo, String response) {
++        responseString(responseInfo, response);
++    }
++
+     private void responseSimStatus(RadioResponseInfo responseInfo, CardStatus cardStatus) {
+         RIRequest rr = mRi.processResponse(responseInfo);
+ 

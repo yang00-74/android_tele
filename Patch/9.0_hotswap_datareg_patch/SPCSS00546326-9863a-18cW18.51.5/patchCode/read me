@@ -1,0 +1,7 @@
+Dear,
+
+diff-current.txt 应用路径：vendor/sprd/interfaces
+diff-radio 应用路径：vendor/sprd/interfaces/radio
+两个 ril so 文件 push 路径： out/target/product/sp98**/vendor/lib64
+
+注： out 目录为我司 release 给贵司的 proprietories-sp9863a_xxx.zip 解压出来的目录

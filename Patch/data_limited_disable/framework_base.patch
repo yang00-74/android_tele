@@ -1,0 +1,56 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java b/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java
+index 0b0f58b..bb1f32c 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java
+@@ -25,6 +25,8 @@ import android.content.pm.PackageManager;
+ import android.content.res.Resources;
+ import android.os.SystemProperties;
+ import android.service.quicksettings.Tile;
++import android.telephony.SubscriptionManager;
++import android.telephony.TelephonyManager;
+ import android.view.LayoutInflater;
+ import android.view.View;
+ import android.view.ViewGroup;
+@@ -112,6 +114,11 @@ public class CellularTile extends QSTileImpl<SignalState> {
+ 
+     @Override
+     protected void handleClick() {
++        int subId = SubscriptionManager.getDefaultDataSubscriptionId();
++        if (!TelephonyManager.from(mContext).isPolicyDataEnabled(subId)) {
++            android.util.Log.d("CellularTile", "isPolicyData off, reutrn");
++            return;
++        }
+         if (mDataController.isMobileDataEnabled()) {
+             if (mKeyguardMonitor.isSecure() && !mKeyguardMonitor.canSkipBouncer()) {
+                 mActivityStarter.postQSRunnableDismissingKeyguard(this::showDisableDialog);
+diff --git a/telephony/java/android/telephony/TelephonyManager.java b/telephony/java/android/telephony/TelephonyManager.java
+index ebf4e5f..830b309 100644
+--- a/telephony/java/android/telephony/TelephonyManager.java
++++ b/telephony/java/android/telephony/TelephonyManager.java
+@@ -6773,6 +6773,15 @@ public class TelephonyManager {
+         } catch (RemoteException e) {
+             Log.e(TAG, "Error calling ITelephony#setPolicyDataEnabled", e);
+         }
++        int phoneId = getPhoneId(subId);
++        setTelephonyProperty(phoneId, TelephonyProperties.PROPERTY_POLICY_DATA_ENABLE,
++                enabled ? "1" : "0");
++    }
++
++    public boolean isPolicyDataEnabled(int subId) {
++        int phoneId = getPhoneId(subId);
++        return getTelephonyProperty(phoneId, TelephonyProperties.PROPERTY_POLICY_DATA_ENABLE,
++                "1").equals("1");
+     }
+ 
+     /**
+diff --git a/telephony/java/com/android/internal/telephony/TelephonyProperties.java b/telephony/java/com/android/internal/telephony/TelephonyProperties.java
+index 6567ea7..f74b929 100644
+--- a/telephony/java/com/android/internal/telephony/TelephonyProperties.java
++++ b/telephony/java/com/android/internal/telephony/TelephonyProperties.java
+@@ -218,4 +218,6 @@ public interface TelephonyProperties
+      */
+     static final String PROPERTY_VIDEOCALL_AUDIO_OUTPUT = "persist.radio.call.audio.output";
+ 
++    static final String PROPERTY_POLICY_DATA_ENABLE = "persist.radio.policy.data.enable";
++
+ }

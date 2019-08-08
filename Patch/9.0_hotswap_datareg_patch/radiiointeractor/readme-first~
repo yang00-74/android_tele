@@ -1,0 +1,5 @@
+之前基于MOCORDROID9.0_Trunk_18C_W18.51.5_P1给过SPCSS00546746降sar的samplecode
+
+这次基于MOCORDROID9.0_Trunk_18C_W18.51.5_P1提供了SPCSS00546746和SPCSS00546326两个CQ合并的samplecode
+
+相应的文件可以直接替换

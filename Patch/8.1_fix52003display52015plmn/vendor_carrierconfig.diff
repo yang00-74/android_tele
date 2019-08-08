@@ -1,0 +1,24 @@
+diff --git a/assets/carrier_config_52001.xml b/assets/carrier_config_52001.xml
+index dad78da..bc8e83c 100644
+--- a/assets/carrier_config_52001.xml
++++ b/assets/carrier_config_52001.xml
+@@ -4,6 +4,7 @@
+         <string-array name="roaming_operator_string_array" num="1">
+             <item value="520"/>
+         </string-array>
++        <string name="network_operator_ignore_rules">52015@AIS-T</string>
+     </carrier_config>
+      <carrier_config network_preferred="true">
+          <int name="network_RAT_prefer" value="2" />
+diff --git a/assets/carrier_config_52003.xml b/assets/carrier_config_52003.xml
+index f581788..7af6f21 100644
+--- a/assets/carrier_config_52003.xml
++++ b/assets/carrier_config_52003.xml
+@@ -6,6 +6,7 @@
+         <string-array name="roaming_operator_string_array" num="1">
+             <item value="520"/>
+         </string-array>
++        <string name="network_operator_ignore_rules">52015@AIS-T</string>
+     </carrier_config>
+      <carrier_config network_preferred="true">
+          <int name="network_RAT_prefer" value="2" />

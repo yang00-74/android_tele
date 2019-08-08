@@ -1,0 +1,24 @@
+diff --git a/packages/SystemUI/res/layout/mobile_signal_group.xml b/packages/SystemUI/res/layout/mobile_signal_group.xml
+index d910ad3..7414cd8 100644
+--- a/packages/SystemUI/res/layout/mobile_signal_group.xml
++++ b/packages/SystemUI/res/layout/mobile_signal_group.xml
+@@ -41,14 +41,14 @@
+         android:contentDescription="@string/accessibility_data_connection_roaming"
+         android:layout_marginRight="2dp"
+         android:visibility="gone" />
+-    <ImageView
+-        android:id="@+id/mobile_type"
+-        android:layout_height="@dimen/statusbar_icon_height_size"
+-        android:layout_width="wrap_content"
+-        />
+     <FrameLayout
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content">
++        <ImageView
++            android:id="@+id/mobile_type"
++            android:layout_height="8dp"
++            android:layout_width="8dp"
++            />
+         <com.android.systemui.statusbar.AnimatedImageView
+             android:theme="@style/DualToneLightTheme"
+             android:id="@+id/mobile_signal"

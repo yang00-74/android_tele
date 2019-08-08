@@ -1,0 +1,14 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java b/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
+index 4d7ba81..bb9bcdb 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
+@@ -1187,7 +1187,8 @@ public class SignalClusterViewEx
+             }
+ 
+             // SPRD: modify for bug847536.
+-            mMobileType.setVisibility(mMobileTypeId != 0 ? View.VISIBLE : View.GONE);
++            mMobileType.setVisibility(mMobileTypeId != 0
++                    && TelephonyManager.from(mContext).isDataEnabled() ? View.VISIBLE : View.GONE);
+             mMobileRoaming.setVisibility(mRoaming ? View.VISIBLE : View.GONE);
+             mMobileActivityIn.setVisibility(mMobileDataInOutId != 0 ? View.VISIBLE : View.GONE);
+             // mMobileActivityOut.setVisibility(mActivityOut ? View.VISIBLE : View.GONE);

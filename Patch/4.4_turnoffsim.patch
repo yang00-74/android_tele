@@ -1,0 +1,37 @@
+diff --git a/src/java/com/android/internal/telephony/uicc/SIMRecords.java b/src/java/com/android/internal/telephony/uicc/SIMRecords.java
+index d7d8a03..8ce02ef 100644
+--- a/src/java/com/android/internal/telephony/uicc/SIMRecords.java
++++ b/src/java/com/android/internal/telephony/uicc/SIMRecords.java
+@@ -64,6 +64,8 @@ import com.android.internal.telephony.SmsMessageBase;
+ import com.android.internal.telephony.TelephonyIntents;
+ import com.android.internal.telephony.TelephonyProperties;
+ import com.android.internal.telephony.gsm.SimTlv;
++import com.android.sprd.telephony.RadioInteractor;
++import com.sprd.internal.telephony.uicc.MsUiccController;
+ import com.sprd.internal.telephony.uicc.Oplrecord;
+ import com.sprd.internal.telephony.uicc.Pnnrecord;
+ import com.sprd.internal.telephony.uicc.IATUtils;
+@@ -1649,6 +1651,25 @@ public class SIMRecords extends IccRecords {
+                 .getSystemService(Context.CARRIER_CONFIG_SERVICE);
+         configManager.updateConfigForPhoneId(mParentApp.getPhoneId(),
+                 IccCardConstants.INTENT_VALUE_ICC_LOADED);
++        turnOffCuccSim();
++    }
++
++    private void turnOffCuccSim() {
++        TelephonyManager telephonyManager = TelephonyManager.from(mContext);
++        String operatorNumerice = getOperatorNumeric();
++        if (operatorNumerice.equalsIgnoreCase("46001")
++                || operatorNumerice.equalsIgnoreCase("46006")
++                || operatorNumerice.equalsIgnoreCase("46009")) {
++            android.util.Log.i("testlog", "......................loaded disable card");
++            RadioInteractor radioInteractor = new RadioInteractor(mContext);
++            String[] oemReq = new String[1];
++            oemReq[0] = "AT+SFUN=3";
++            radioInteractor.sendAtCmd(oemReq, null, mParentApp.getPhoneId());
++            UiccController uiccController = MsUiccController.getInstance(mParentApp.getPhoneId());
++            AsyncResult ar = new AsyncResult(mParentApp.getPhoneId(), null, null);
++            uiccController.sendMessage(
++                    uiccController.obtainMessage(1, ar));
++        }
+     }

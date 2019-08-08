@@ -1,0 +1,27 @@
+diff --git a/ex-interface/telephony/java/android/telephony/CarrierConfigManagerEx.java b/ex-interface/telephony/java/android/telephony/CarrierConfigManagerEx.java
+index 7b68b00..9f3f0d2 100644
+--- a/ex-interface/telephony/java/android/telephony/CarrierConfigManagerEx.java
++++ b/ex-interface/telephony/java/android/telephony/CarrierConfigManagerEx.java
+@@ -301,6 +301,13 @@
+     // SPRD: add for bug 940568
+     public static final String KEY_SUPPORT_SHOW_TURNON_WIFI_TOAST = "support_show_turnon_wifi_toast";
+ 
++    /**
++    * SPRD:add for Bug949130,the operator name is displayed as a customer request
++    * and no longer cares about the 3GPP protocol display rules.
++    * {@hide}
++    */
++    public static final String KEY_NETWORK_NAME_IGNORE_RULES = "network_operator_ignore_rules";
++
+     /** The default value for every variable. */
+     private final static PersistableBundle sDefaultsEx;
+     static {
+@@ -422,6 +429,8 @@
+         sDefaultsEx.putBoolean(KEY_SUPPORT_FAC_CODE, false);
+         // SPRD: add for bug940568
+         sDefaultsEx.putBoolean(KEY_SUPPORT_SHOW_TURNON_WIFI_TOAST, false);
++        // SPRD: add for bug 949130
++        sDefaultsEx.putString(KEY_NETWORK_NAME_IGNORE_RULES,"");
+     }
+ 
+     /**

@@ -1,0 +1,195 @@
+
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/AccessibilityContentDescriptions.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/AccessibilityContentDescriptions.java
+index 8f86e2d..7ee2a6a 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/AccessibilityContentDescriptions.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/AccessibilityContentDescriptions.java
+@@ -15,6 +15,7 @@ public class AccessibilityContentDescriptions {
+         R.string.accessibility_phone_one_bar,
+         R.string.accessibility_phone_two_bars,
+         R.string.accessibility_phone_three_bars,
++        R.string.accessibility_phone_signal_full,
+         R.string.accessibility_phone_signal_full
+     };
+ 
+@@ -23,7 +24,9 @@ public class AccessibilityContentDescriptions {
+         R.string.accessibility_data_one_bar,
+         R.string.accessibility_data_two_bars,
+         R.string.accessibility_data_three_bars,
++        R.string.accessibility_data_signal_full,
+         R.string.accessibility_data_signal_full
++
+     };
+ 
+     static final int[] WIFI_CONNECTION_STRENGTH = {
+diff --git a/telephony/java/android/telephony/SignalStrength.java b/telephony/java/android/telephony/SignalStrength.java
+index 31feb55..98ac150 100644
+--- a/telephony/java/android/telephony/SignalStrength.java
++++ b/telephony/java/android/telephony/SignalStrength.java
+@@ -28,8 +28,9 @@ import android.content.res.Resources;
+ public class SignalStrength implements Parcelable {
+ 
+     private static final String LOG_TAG = "SignalStrength";
+-    private static final boolean DBG = false;
+-
++    private static final boolean DBG = true;
++    private static boolean SHOW_FIVE_LEVEL = Resources.getSystem().getBoolean
++            (com.android.internal.R.bool.config_show_five_level_signal);
+     /** @hide */
+     public static final int SIGNAL_STRENGTH_NONE_OR_UNKNOWN = 0;
+     /** @hide */
+@@ -41,7 +42,9 @@ public class SignalStrength implements Parcelable {
+     /** @hide */
+     public static final int SIGNAL_STRENGTH_GREAT = 4;
+     /** @hide */
+-    public static final int NUM_SIGNAL_STRENGTH_BINS = 5;
++    public static final int SIGNAL_STRENGTH_BEST = 5;
++    /** @hide */
++    public static final int NUM_SIGNAL_STRENGTH_BINS = SHOW_FIVE_LEVEL ? 6 : 5;
+     /** @hide */
+     public static final String[] SIGNAL_STRENGTH_NAMES = {
+         "none", "poor", "moderate", "good", "great"
+@@ -551,6 +554,7 @@ public class SignalStrength implements Parcelable {
+     public int getLevel() {
+         int level = isGsm ? getGsmRelatedSignalStrength() : getCdmaRelatedSignalStrength();
+         if (DBG) log("getLevel=" + level);
++        log("mShowFiveLevel = " + SHOW_FIVE_LEVEL);
+         return level;
+     }
+ 
+@@ -649,12 +653,25 @@ public class SignalStrength implements Parcelable {
+         // signal, its better to show 0 bars to the user in such cases.
+         // asu = 99 is a special case, where the signal strength is unknown.
+         int asu = getGsmSignalStrength();
+-        if (asu <= 2 || asu == 99) level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
+-        else if (asu >= 12) level = SIGNAL_STRENGTH_GREAT;
+-        else if (asu >= 8)  level = SIGNAL_STRENGTH_GOOD;
+-        else if (asu >= 5)  level = SIGNAL_STRENGTH_MODERATE;
+-        else level = SIGNAL_STRENGTH_POOR;
+-        if (DBG) log("getGsmLevel=" + level);
++        if (SHOW_FIVE_LEVEL) {
++            int[] fiveLevelThreshGsm = Resources.getSystem().getIntArray(
++                    com.android.internal.R.array.config_five_level_gsmDbmThresholds);
++            int dBm = getGsmDbm();
++            if (dBm <= fiveLevelThreshGsm[1] || dBm > fiveLevelThreshGsm[6]) 
++                level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++            else if (dBm >= fiveLevelThreshGsm[5]) level = SIGNAL_STRENGTH_BEST;
++            else if (dBm >= fiveLevelThreshGsm[4]) level = SIGNAL_STRENGTH_GREAT;
++            else if (dBm >= fiveLevelThreshGsm[3]) level = SIGNAL_STRENGTH_GOOD;
++            else if (dBm >= fiveLevelThreshGsm[2]) level = SIGNAL_STRENGTH_MODERATE;
++            else level = SIGNAL_STRENGTH_POOR;
++            if (DBG) log("getGsmLevel=" + level);
++        } else {
++            if (asu <= 2 || asu == 99) level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++            else if (asu >= 12) level = SIGNAL_STRENGTH_GREAT;
++            else if (asu >= 8) level = SIGNAL_STRENGTH_GOOD;
++            else if (asu >= 5) level = SIGNAL_STRENGTH_MODERATE;
++            else level = SIGNAL_STRENGTH_POOR;
++            if (DBG) log("getGsmLevel=" + level);
++        }
+         return level;
+     }
+ 
+@@ -816,25 +833,49 @@ public class SignalStrength implements Parcelable {
+ 
+         int[] threshRsrp = Resources.getSystem().getIntArray(
+                 com.android.internal.R.array.config_lteDbmThresholds);
+-        if (threshRsrp.length != 6) {
+-            Log.wtf(LOG_TAG, "getLteLevel - config_lteDbmThresholds has invalid num of elements."
+-                    + " Cannot evaluate RSRP signal.");
++        if (SHOW_FIVE_LEVEL) {
++            int[] fiveLevelThreshRsrp = Resources.getSystem().getIntArray(
++                    com.android.internal.R.array.config_five_level_lteDbmThresholds);
++            if (fiveLevelThreshRsrp.length != 7) {
++                Log.wtf(LOG_TAG, "getLteLevel - config_lteDbmThresholds has invalid num of elements."
++                        + " Cannot evaluate RSRP signal.");
++            } else {
++                if (mLteRsrp > fiveLevelThreshRsrp[6]) {
++                    rsrpIconLevel = -1;
++                } else if (mLteRsrp >= (fiveLevelThreshRsrp[5] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_BEST;
++                } else if (mLteRsrp >= (fiveLevelThreshRsrp[4] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_GREAT;
++                } else if (mLteRsrp >= (fiveLevelThreshRsrp[3] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_GOOD;
++                } else if (mLteRsrp >= (fiveLevelThreshRsrp[2] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_MODERATE;
++                } else if (mLteRsrp >= (fiveLevelThreshRsrp[1] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_POOR;
++                } else if (mLteRsrp >= fiveLevelThreshRsrp[0]) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++                }
++            }
+         } else {
+-            if (mLteRsrp > threshRsrp[5]) {
+-                rsrpIconLevel = -1;
+-            } else if (mLteRsrp >= (threshRsrp[4] - mLteRsrpBoost)) {
+-                rsrpIconLevel = SIGNAL_STRENGTH_GREAT;
+-            } else if (mLteRsrp >= (threshRsrp[3] - mLteRsrpBoost)) {
+-                rsrpIconLevel = SIGNAL_STRENGTH_GOOD;
+-            } else if (mLteRsrp >= (threshRsrp[2] - mLteRsrpBoost)) {
+-                rsrpIconLevel = SIGNAL_STRENGTH_MODERATE;
+-            } else if (mLteRsrp >= (threshRsrp[1] - mLteRsrpBoost)) {
+-                rsrpIconLevel = SIGNAL_STRENGTH_POOR;
+-            } else if (mLteRsrp >= threshRsrp[0]) {
+-                rsrpIconLevel = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++            if (threshRsrp.length != 6) {
++                Log.wtf(LOG_TAG, "getLteLevel - config_lteDbmThresholds has invalid num of elements."
++                        + " Cannot evaluate RSRP signal.");
++            } else {
++                if (mLteRsrp > threshRsrp[5]) {
++                    rsrpIconLevel = -1;
++                } else if (mLteRsrp >= (threshRsrp[4] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_GREAT;
++                } else if (mLteRsrp >= (threshRsrp[3] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_GOOD;
++                } else if (mLteRsrp >= (threshRsrp[2] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_MODERATE;
++                } else if (mLteRsrp >= (threshRsrp[1] - mLteRsrpBoost)) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_POOR;
++                } else if (mLteRsrp >= threshRsrp[0]) {
++                    rsrpIconLevel = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++                }
+             }
+         }
+-
+         /*
+          * Values are -200 dB to +300 (SNR*10dB) RS_SNR >= 13.0 dB =>4 bars 4.5
+          * dB <= RS_SNR < 13.0 dB => 3 bars 1.0 dB <= RS_SNR < 4.5 dB => 2 bars
+@@ -934,16 +975,28 @@ public class SignalStrength implements Parcelable {
+     public int getTdScdmaLevel() {
+         final int tdScdmaDbm = getTdScdmaDbm();
+         int level;
+-
+-        if ((tdScdmaDbm > -25) || (tdScdmaDbm == SignalStrength.INVALID))
++        if (SHOW_FIVE_LEVEL) {
++            int[] fiveLevelThreshTdscdma = Resources.getSystem().getIntArray(
++                    com.android.internal.R.array.config_five_level_tdscdmaDbmThresholds);
++            if (tdScdmaDbm < fiveLevelThreshTdscdma[0] || tdScdmaDbm > fiveLevelThreshTdscdma[6]
++                    || tdScdmaDbm == SignalStrength.INVALID)
+                 level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
+-        else if (tdScdmaDbm >= -49) level = SIGNAL_STRENGTH_GREAT;
+-        else if (tdScdmaDbm >= -73) level = SIGNAL_STRENGTH_GOOD;
+-        else if (tdScdmaDbm >= -97) level = SIGNAL_STRENGTH_MODERATE;
+-        else if (tdScdmaDbm >= -110) level = SIGNAL_STRENGTH_POOR;
+-        else level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
+-
+-        if (DBG) log("getTdScdmaLevel = " + level);
++            else if (tdScdmaDbm >= fiveLevelThreshTdscdma[5]) level = SIGNAL_STRENGTH_BEST;
++            else if (tdScdmaDbm >= fiveLevelThreshTdscdma[4]) level = SIGNAL_STRENGTH_GREAT;
++            else if (tdScdmaDbm >= fiveLevelThreshTdscdma[3]) level = SIGNAL_STRENGTH_GOOD;
++            else if (tdScdmaDbm >= fiveLevelThreshTdscdma[2]) level = SIGNAL_STRENGTH_MODERATE;
++            else level = SIGNAL_STRENGTH_POOR;
++            if (DBG) log("getTdScdmaLevel = " + level);
++        } else {
++            if ((tdScdmaDbm > -25) || (tdScdmaDbm == SignalStrength.INVALID))
++                level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++            else if (tdScdmaDbm >= -49) level = SIGNAL_STRENGTH_GREAT;
++            else if (tdScdmaDbm >= -73) level = SIGNAL_STRENGTH_GOOD;
++            else if (tdScdmaDbm >= -97) level = SIGNAL_STRENGTH_MODERATE;
++            else if (tdScdmaDbm >= -110) level = SIGNAL_STRENGTH_POOR;
++            else level = SIGNAL_STRENGTH_NONE_OR_UNKNOWN;
++            if (DBG) log("getTdScdmaLevel = " + level);
++        }
+         return level;
+      }
+ 

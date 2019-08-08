@@ -1,0 +1,76 @@
+diff --git a/src/com/android/settings/datausage/DataUsageSummary.java b/src/com/android/settings/datausage/DataUsageSummary.java
+index ad95d1a..57f5258 100644
+--- a/src/com/android/settings/datausage/DataUsageSummary.java
++++ b/src/com/android/settings/datausage/DataUsageSummary.java
+@@ -209,7 +209,10 @@ public class DataUsageSummary extends DataUsageBase implements Indexable, DataUs
+                                         && (services.mTelephonyManager.getCallState(this.mSubId)
+                                                 == TelephonyManager.CALL_STATE_IDLE)
+                                         && services.mTelephonyManager. getCallStateForSlot(otherPhone) == TelephonyManager.CALL_STATE_IDLE
+-                                        && isSimDataEnabled(phoneId));
++                                        && isSimDataEnabled(phoneId)
++                                        && isSmartCard(mCellDataPreferences[i].mSubId));
++                                    Log.d(TAG, "onCallStateChanged isSmartCard = "
++                                            + isSmartCard(mCellDataPreferences[i].mSubId));
+                                     mBillingCyclePreferences[i].updateEnabled();
+                                     /* @} */
+                                 }
+@@ -464,18 +467,27 @@ public class DataUsageSummary extends DataUsageBase implements Indexable, DataUs
+                     int subId = subscriptionInfo.getSubscriptionId();
+                     //added for bug 875251, fresh the billcycle status
+                     mBillingCyclePreferences[i].updateEnabled();
++                    boolean isSmartCard = isSmartCard(subId);
++                    Log.d(TAG, "subid = " + subId + " isSmartCard = " + isSmartCard);
+                     if (subId != defaultDataSubId && mUserManager != null) {
+-                        mCellDataPreferences[i].setEnabled(isEnabled && mUserManager.isAdminUser());
++                        mCellDataPreferences[i].setEnabled(isEnabled && mUserManager.isAdminUser()
++                                && isSmartCard);
+                         continue;
+                     }
+                     /* @}*/
+-                    mCellDataPreferences[i].setEnabled(isEnabled);
++                    mCellDataPreferences[i].setEnabled(isEnabled && isSmartCard);
+                 }
+             }
+         }
+     }
+     /* @}*/
+ 
++    private boolean isSmartCard(int subId) {
++        TelephonyManager telephonyManager = TelephonyManager.from(getPrefContext());
++        String numeric = telephonyManager.getSimOperatorNumeric(subId);
++        return numeric.equals("51503") || numeric.equals("51505");
++    }
++
+     @Override
+     public int getMetricsCategory() {
+         return MetricsEvent.DATA_USAGE_SUMMARY;
+diff --git a/src/com/android/settings/sim/SimDialogActivity.java b/src/com/android/settings/sim/SimDialogActivity.java
+index 0cd860e..99854b9 100644
+--- a/src/com/android/settings/sim/SimDialogActivity.java
++++ b/src/com/android/settings/sim/SimDialogActivity.java
+@@ -178,6 +178,13 @@ public class SimDialogActivity extends Activity {
+ 
+     /* SPRD: Add plugin for data switch prompt if necessary. @{ */
+     private void setDefaultDataSubIdWithPrompt(final Context context, final int subId) {
++        if (!isSmartCard(subId)) {
++            //TODO The string here should replaced by string resource
++            Toast.makeText(context, "it`s not smart sim card,can not switch",
++                    Toast.LENGTH_SHORT).show();
++            finish();
++            return;
++        }
+         if (subId != SubscriptionManager.getDefaultDataSubscriptionId()) {
+             SettingsOperatorHelper helper = SettingsOperatorHelper
+                     .getInstanceForDataSwitch(context);
+@@ -200,6 +207,11 @@ public class SimDialogActivity extends Activity {
+         }
+     }
+     /* @} */
++    private boolean isSmartCard(int subId) {
++        TelephonyManager telephonyManager = TelephonyManager.from(getApplication());
++        String numeric = telephonyManager.getSimOperatorNumeric(subId);
++        return numeric.equals("51503") || numeric.equals("51505");
++    }
+ 
+     private static void setDefaultSmsSubId(final Context context, final int subId) {
+         final SubscriptionManager subscriptionManager = SubscriptionManager.from(context);

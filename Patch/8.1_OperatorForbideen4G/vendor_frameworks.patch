@@ -1,0 +1,27 @@
+diff --git a/ex-interface/com/android/internal/telephony/TeleUtils.java b/ex-interface/com/android/internal/telephony/TeleUtils.java
+index d6813e2..6aff718 100644
+--- a/ex-interface/com/android/internal/telephony/TeleUtils.java
++++ b/ex-interface/com/android/internal/telephony/TeleUtils.java
+@@ -6,6 +6,7 @@ import android.content.res.Resources.NotFoundException;
+ import android.os.SystemProperties;
+ import android.provider.Settings;
+ import android.provider.SettingsEx;
++import android.telephony.TelephonyManager;
+ import android.text.TextUtils;
+ import android.util.Log;
+ 
+@@ -192,4 +193,14 @@ public class TeleUtils {
+     public static boolean isFixedSlot() {
+         return "true".equals(SystemProperties.get("ro.radio.fixed_slot","false"));
+     }
++
++    public static boolean isOperatorForbidden4G(int subId) {
++        TelephonyManager manager = TelephonyManager.getDefault();
++        String numeric = manager.getSimOperatorNumeric(subId);
++        if (null == numeric) {
++            Log.d(LOG_TAG,"isOperatorForbidden4G numeric is null,return false");
++            return false;
++        }
++        return (numeric.equals("46001") || numeric.equals("46006") || numeric.equals("46009"));
++    }
+ }

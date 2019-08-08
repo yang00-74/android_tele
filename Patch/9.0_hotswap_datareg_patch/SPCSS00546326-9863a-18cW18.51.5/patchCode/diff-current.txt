@@ -1,0 +1,16 @@
+diff --git a/current.txt b/current.txt
+index 5d7bc9a..f9b597b 100644
+--- a/current.txt
++++ b/current.txt
+@@ -91,9 +91,9 @@ cc7798bc7af8e27a4817ad3385214112084d9d0744d0b3ad6a7b3242ec630925 vendor.sprd.har
+ 24cfda1e422835752e896568b6e7224dad2c8241b2b2e069a5e708625008c18a vendor.sprd.hardware.gnss@2.0::IGnssXtraCallback
+ 
+ ae848d44475e09bf200d0bb0a9e62516b0d36852c4359d0e062e07b97c38ba57 vendor.sprd.hardware.radio@1.0::types
+-761c810b7072bfd1c8995a6f7df5012686eb926f708af940114e167c705de9d5 vendor.sprd.hardware.radio@1.0::IExtRadio
++62ac01a142e5a8e92a757aed06d358b092ca76c6ab6f6ceb686cd4d89761bbfb vendor.sprd.hardware.radio@1.0::IExtRadio
+ 2ac60be141ecc442ec0f720386a7dfa95f539c0437dd4a72138f19a97ea01ec6 vendor.sprd.hardware.radio@1.0::IExtRadioIndication
+-22f18327908c3c5e9624ce9aa0459c97114684fe5c48e89bf588abbd6528e796 vendor.sprd.hardware.radio@1.0::IExtRadioResponse
++c54c7dad06ecea593a38e62d499cc0f48a3afbbaaa77382f9d47c6fac9ed2f90 vendor.sprd.hardware.radio@1.0::IExtRadioResponse
+ 3b349113387b4b0001506fde77792ad61022bf1253e6e8c9979739c0d4ac4166 vendor.sprd.hardware.radio@1.0::IAtcRadioResponse
+ 7c4d71da64a611eb4deef4091aa7573d01f8ee7916da9dbc55d18ce66d7b0075 vendor.sprd.hardware.radio@1.0::IAtcRadioIndication
+ a3a1b9c3d4d7dded62464bd5e66830024d9fa70154c1170cac362c672d9b178c vendor.sprd.hardware.radio.flavor@1.0::IFlvRadio

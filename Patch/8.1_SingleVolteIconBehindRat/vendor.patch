@@ -1,0 +1,54 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java b/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
+index 4d7ba81..cf83dca 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/SignalClusterViewEx.java
+@@ -563,7 +563,14 @@ public class SignalClusterViewEx
+                 && !ImsManagerEx.isDualLteModem()) {
+             mVolteVisible = show;
+             mVolteIconId = resId;
+-            for (PhoneState state : mPhoneStates) {
++            PhoneState state = getState(subId);
++            Log.d(TAG, "single volte subId=" + subId + "PhoneState is null="
++                    + (null == state) + " show=" + show + " resId=" + resId);
++            if (state == null) {
++                return;
++            } else if (show) {
++                state.mMobileVolteId = resId;
++            } else {
+                 state.mMobileVolteId = 0;
+             }
+         } else {
+@@ -838,7 +845,8 @@ public class SignalClusterViewEx
+                 /* @} */
+                 mLastVolteIconId = mVolteIconId;
+             }
+-            mVolte.setVisibility(View.VISIBLE);
++            Log.d(TAG, "single volte use dual volte mode display,outside volte icon GONE");
++            mVolte.setVisibility(View.GONE);
+         } else {
+             mVolte.setVisibility(View.GONE);
+         }
+@@ -1165,6 +1173,7 @@ public class SignalClusterViewEx
+                         .getBoolean(R.bool.showMovistarVolteIcon);
+                 boolean showSplitVolteIcon = mContext.getResources()
+                         .getBoolean(R.bool.config_showSplitVolteIcon);
++                showSplitVolteIcon = true;
+                 Log.d(TAG, "showMovistarVolteIcon for dual volte: " + showMovistarVolteIcon
+                         + "; showSplitVolteIcon : " + showSplitVolteIcon);
+                 if (showMovistarVolteIcon) {
+@@ -1179,7 +1188,14 @@ public class SignalClusterViewEx
+                 }
+                 /* @} */
+             } else {
+-                mMobileVolte.setVisibility(View.GONE);
++                Log.d(TAG, "single volte subid =" + mSubId + "mShowVolteIcon=" + mShowVolteIcon
++                        + " mMobileVolteId=" + mMobileVolteId + " mIsAirplane=" + mIsAirplaneMode);
++                if (mShowVolteIcon && !mIsAirplaneMode && mMobileVolteId != 0) {
++                    mMobileVolte.setImageResource(mMobileVolteId);
++                    mMobileVolte.setVisibility(View.VISIBLE);
++                } else {
++                    mMobileVolte.setVisibility(View.GONE);
++                }
+                 if (mMobileType.getTag() != null) {
+                     mMobileType.setTag(null);
+                     mMobileType.setImageResource(mLastMobileTypeId);

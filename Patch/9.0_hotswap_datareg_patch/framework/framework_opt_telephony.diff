@@ -1,0 +1,269 @@
+From 0cd08001489287cb6c2d4383bb7a2ab39080577d Mon Sep 17 00:00:00 2001
+From: vivi.li <Vivi.Li@unisoc.com>
+Date: Mon, 07 Jan 2019 16:57:57 +0800
+Subject: [PATCH] Bug #991486 When IccId has fetched then to create SubscriptionInfo
+
+[root cause  ]Create SubscriptionInfo to late
+[changes     ] When IccId has fetched then to create SubscriptionInfo
+[side effects] none
+[self test   ]:pass
+[download normally]:yes
+[power on/off normally]:yes
+[do common repository/branch inspection]:no
+[is there dependence]:no
+[confirm dependent commit]:none
+[board]:9.0
+[test case]:SubscriptionInfoUpdate
+[reviewers   ] daxing.cao
+[change_type ] AOB --> sprd_adaptation
+[tag_product ] common
+
+Change-Id: I56d92cd61105724cab0917fc961e3dadd5dbd6b4
+---
+
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index 213d5fa..d835dfe 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -78,6 +78,7 @@
+     private static final int EVENT_SIM_READY = 10;
+     private static final int EVENT_SIM_IMSI = 11;
+     private static final int EVENT_REFRESH_EMBEDDED_SUBSCRIPTIONS = 12;
++    private static final int EVENT_SIM_ICCID_LOADED = 13;
+ 
+     private static final String ICCID_STRING_FOR_NO_SIM = "";
+     /**
+@@ -193,6 +194,7 @@
+             case IccCardConstants.INTENT_VALUE_ICC_LOADED: return EVENT_SIM_LOADED;
+             case IccCardConstants.INTENT_VALUE_ICC_READY: return EVENT_SIM_READY;
+             case IccCardConstants.INTENT_VALUE_ICC_IMSI: return EVENT_SIM_IMSI;
++            case IccCardConstants.INTENT_VALUE_ICCID_LOADED: return EVENT_SIM_ICCID_LOADED;
+             default:
+                 logd("Ignoring simStatus: " + simStatus);
+                 return EVENT_INVALID;
+@@ -269,6 +271,9 @@
+             case EVENT_SIM_IMSI:
+                 broadcastSimStateChanged(msg.arg1, IccCardConstants.INTENT_VALUE_ICC_IMSI, null);
+                 break;
++            case EVENT_SIM_ICCID_LOADED:
++                handleSimIccIdLoaded(msg.arg1, (String) msg.obj);
++                break;
+ 
+             case EVENT_SIM_NOT_READY:
+                 broadcastSimStateChanged(msg.arg1, IccCardConstants.INTENT_VALUE_ICC_NOT_READY,
+@@ -338,6 +343,40 @@
+         broadcastSimApplicationStateChanged(slotId, getSimStateFromLockedReason(reason));
+     }
+ 
++    private void handleSimIccIdLoaded(int slotId, String reason) {
++        if (mIccId[slotId] != null && mIccId[slotId].equals(ICCID_STRING_FOR_NO_SIM)) {
++            logd("SIM" + (slotId + 1) + " hot plug in");
++            mIccId[slotId] = null;
++        }
++
++        String iccId = mIccId[slotId];
++        if (iccId == null) {
++            IccCard iccCard = mPhone[slotId].getIccCard();
++            if (iccCard == null) {
++                logd("handleSimIccIdLoaded: IccCard null");
++                return;
++            }
++            IccRecords records = iccCard.getIccRecords();
++            if (records == null) {
++                logd("handleSimIccIdLoaded: IccRecords null");
++                return;
++            }
++            if (IccUtils.stripTrailingFs(records.getFullIccId()) == null) {
++                logd("handleSimIccIdLoaded: IccID null");
++                return;
++            }
++            mIccId[slotId] = records.getFullIccId();
++        } else {
++            logd("NOT Querying IccId its already set sIccid[" + slotId + "]=" + iccId);
++        }
++
++        if (isAllIccIdQueryDone()) {
++            updateSubscriptionInfoByIccId();
++        }
++
++        broadcastSimStateChanged(slotId, IccCardConstants.INTENT_VALUE_ICCID_LOADED, reason);
++    }
++
+     private static int getSimStateFromLockedReason(String lockedReason) {
+         switch (lockedReason) {
+             case IccCardConstants.INTENT_VALUE_LOCKED_ON_PIN:
+diff --git a/src/java/com/android/internal/telephony/uicc/IccRecords.java b/src/java/com/android/internal/telephony/uicc/IccRecords.java
+index 97d497c..46a1ec6 100644
+--- a/src/java/com/android/internal/telephony/uicc/IccRecords.java
++++ b/src/java/com/android/internal/telephony/uicc/IccRecords.java
+@@ -63,6 +63,7 @@
+     protected RegistrantList mNetworkSelectionModeAutomaticRegistrants = new RegistrantList();
+     protected RegistrantList mSpnUpdatedRegistrants = new RegistrantList();
+     protected RegistrantList mRecordsOverrideRegistrants = new RegistrantList();
++    protected RegistrantList mIccIdLoadedRegistrants = new RegistrantList();
+ 
+     protected int mRecordsToLoad;  // number of pending load requests
+ 
+@@ -393,6 +394,22 @@
+         mImsiReadyRegistrants.remove(h);
+     }
+ 
++    public void registerForIccIdReady(Handler h, int what, Object obj) {
++        if (mDestroyed.get()) {
++            return;
++        }
++
++        Registrant r = new Registrant(h, what, obj);
++        mIccIdLoadedRegistrants.add(r);
++
++        if (getIccId() != null) {
++            r.notifyRegistrant(new AsyncResult(null, null, null));
++        }
++    }
++    public void unregisterForIccIdReady(Handler h) {
++        mIccIdLoadedRegistrants.remove(h);
++    }
++
+     public void registerForSpnUpdate(Handler h, int what, Object obj) {
+         if (mDestroyed.get()) {
+             return;
+diff --git a/src/java/com/android/internal/telephony/uicc/SIMRecords.java b/src/java/com/android/internal/telephony/uicc/SIMRecords.java
+index 7a4a7af..21a1bd2 100755
+--- a/src/java/com/android/internal/telephony/uicc/SIMRecords.java
++++ b/src/java/com/android/internal/telephony/uicc/SIMRecords.java
+@@ -36,6 +36,7 @@
+ import com.android.internal.telephony.TeleUtils;
+ import com.android.internal.telephony.gsm.SimTlv;
+ import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppType;
++import com.android.sprd.telephony.RadioInteractor;
+ 
+ import java.io.FileDescriptor;
+ import java.io.PrintWriter;
+@@ -87,6 +88,8 @@
+     ArrayList<String> mSpdiNetworks = null;
+ 
+     UsimServiceTable mUsimServiceTable;
++    private RadioInteractor mRadioInteractor;
++    private boolean mIccIdLoadedNotify = true;
+ 
+     // SPRD: Add cache of original SPN value.
+     String mOriginalSpn = null;
+@@ -226,6 +229,7 @@
+         mParentApp.registerForReady(this, EVENT_APP_READY, null);
+         mParentApp.registerForLocked(this, EVENT_APP_LOCKED, null);
+         mParentApp.registerForNetworkLocked(this, EVENT_APP_NETWORK_LOCKED, null);
++        mRadioInteractor = new RadioInteractor(c);
+         if (DBG) log("SIMRecords X ctor this=" + this);
+     }
+ 
+@@ -284,6 +288,7 @@
+         mRecordsRequested = false;
+         mLockedRecordsReqReason = LOCKED_RECORDS_REQ_REASON_NONE;
+         mLoaded.set(false);
++        mIccIdLoadedNotify = true;
+     }
+ 
+     //***** Public Methods
+@@ -910,16 +915,20 @@
+                     isRecordLoadResponse = true;
+ 
+                     ar = (AsyncResult) msg.obj;
+-                    data = (byte[]) ar.result;
++                    //data = (byte[]) ar.result;
+ 
+                     if (ar.exception != null) {
+                         break;
+                     }
+ 
+                     /* UNISOC: Fix AOSP IccId issue @{*/
+-                    mFullIccId = IccUtils.bchToString(data, 0, data.length);
++                    mFullIccId = /*IccUtils.bchToString(data, 0, data.length)*/(String) ar.result;
+                     mIccId = mFullIccId;
+                     /* @} */
++                    if (mIccIdLoadedNotify) {
++                        mIccIdLoadedNotify = false;
++                        mIccIdLoadedRegistrants.notifyRegistrants();
++                    }
+                     log("iccid: " + SubscriptionInfo.givePrintableIccid(mFullIccId));
+                     break;
+ 
+@@ -1640,7 +1649,9 @@
+ 
+         loadEfLiAndEfPl();
+ 
+-        mFh.loadEFTransparent(EF_ICCID, obtainMessage(EVENT_GET_ICCID_DONE));
++        //UNISOC:Loading ICCID by CRSM takes too long
++        //mFh.loadEFTransparent(EF_ICCID, obtainMessage(EVENT_GET_ICCID_DONE));
++        mRadioInteractor.getIccId(obtainMessage(EVENT_GET_ICCID_DONE),mParentApp.getPhoneId());
+         mRecordsToLoad++;
+     }
+ 
+@@ -1672,7 +1683,9 @@
+         mCi.getIMSIForApp(mParentApp.getAid(), obtainMessage(EVENT_GET_IMSI_DONE));
+         mRecordsToLoad++;
+ 
+-        mFh.loadEFTransparent(EF_ICCID, obtainMessage(EVENT_GET_ICCID_DONE));
++        //UNISOC:Loading ICCID by CRSM takes too long
++        //mFh.loadEFTransparent(EF_ICCID, obtainMessage(EVENT_GET_ICCID_DONE));
++        mRadioInteractor.getIccId(obtainMessage(EVENT_GET_ICCID_DONE),mParentApp.getPhoneId());
+         mRecordsToLoad++;
+ 
+         // FIXME should examine EF[MSISDN]'s capability configuration
+diff --git a/src/java/com/android/internal/telephony/uicc/UiccProfile.java b/src/java/com/android/internal/telephony/uicc/UiccProfile.java
+index e9ba1c5..5245be3 100644
+--- a/src/java/com/android/internal/telephony/uicc/UiccProfile.java
++++ b/src/java/com/android/internal/telephony/uicc/UiccProfile.java
+@@ -107,6 +107,7 @@
+     private CatService mCatService;
+     private UiccCarrierPrivilegeRules mCarrierPrivilegeRules;
+     private boolean mDisposed = false;
++    private boolean mIccReadyNotify = true;
+ 
+     private RegistrantList mCarrierPrivilegeRegistrants = new RegistrantList();
+     private RegistrantList mOperatorBrandOverrideRegistrants = new RegistrantList();
+@@ -128,6 +129,7 @@
+     private static final int EVENT_SIM_IO_DONE = 12;
+     private static final int EVENT_CARRIER_PRIVILEGES_LOADED = 13;
+     private static final int EVENT_CARRIER_CONFIG_CHANGED = 14;
++    private static final int EVENT_ICCID_LOADED_EVENTS = 15;
+ 
+     private TelephonyManager mTelephonyManager;
+ 
+@@ -222,6 +224,13 @@
+                     AsyncResult.forMessage((Message) ar.userObj, ar.result, ar.exception);
+                     ((Message) ar.userObj).sendToTarget();
+                     break;
++                case EVENT_ICCID_LOADED_EVENTS:
++                    if (mIccReadyNotify) {
++                        mIccReadyNotify = false;
++                        UiccController.updateInternalIccState(IccCardConstants.INTENT_VALUE_ICCID_LOADED,
++                                null, mPhoneId);
++                    }
++                    break;
+ 
+                 default:
+                     loge("handleMessage: Unhandled message with number: " + msg.what);
+@@ -287,6 +296,7 @@
+             mUiccApplications = null;
+             mCarrierPrivilegeRules = null;
+             mDisposed = true;
++            mIccReadyNotify = true;
+         }
+     }
+ 
+@@ -562,6 +572,7 @@
+                     if (VDBG) log("registerUiccCardEvents: registering for EVENT_RECORDS_LOADED");
+                     ir.registerForRecordsLoaded(mHandler, EVENT_RECORDS_LOADED, null);
+                     ir.registerForRecordsEvents(mHandler, EVENT_ICC_RECORD_EVENTS, null);
++                    ir.registerForIccIdReady(mHandler, EVENT_ICCID_LOADED_EVENTS, null);
+                 }
+             }
+         }
+@@ -575,6 +586,7 @@
+                 if (ir != null) {
+                     ir.unregisterForRecordsLoaded(mHandler);
+                     ir.unregisterForRecordsEvents(mHandler);
++                    ir.unregisterForIccIdReady(mHandler);
+                 }
+             }
+         }

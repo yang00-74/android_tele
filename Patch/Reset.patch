@@ -1,0 +1,177 @@
+diff --git a/src/com/android/providers/telephony/TelephonyProvider.java b/src/com/android/providers/telephony/TelephonyProvider.java
+index 7cf7d9d..e1626aa 100644
+--- a/src/com/android/providers/telephony/TelephonyProvider.java
++++ b/src/com/android/providers/telephony/TelephonyProvider.java
+@@ -559,6 +559,84 @@ public class TelephonyProvider extends ContentProvider
+ 
+         }
+ 
++        private void initDatabaseWithNumeric(SQLiteDatabase db, String numeric) {
++            if (VDBG) log("dbh.initDatabase:+ db=" + db);
++            // Read internal APNS data
++            Resources r = mContext.getResources();
++            XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
++            int publicversion = -1;
++            try {
++                XmlUtils.beginDocument(parser, "apns");
++                publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
++                loadApnsWithNumeric(db, parser, numeric);
++            } catch (Exception e) {
++                loge("Got exception while loading APN database." + e);
++            } finally {
++                parser.close();
++            }
++
++            // Read external APNS data (partner-provided)
++            XmlPullParser confparser = null;
++            File confFile = getApnConfFile();
++
++            FileReader confreader = null;
++            if (DBG) log("confFile = " + confFile);
++            try {
++                confreader = new FileReader(confFile);
++                confparser = Xml.newPullParser();
++                confparser.setInput(confreader);
++                XmlUtils.beginDocument(confparser, "apns");
++
++                // Sanity check. Force internal version and confidential versions to agree
++                int confversion = Integer.parseInt(confparser.getAttributeValue(null, "version"));
++                if (publicversion != confversion) {
++                    log("initDatabase: throwing exception due to version mismatch");
++                    throw new IllegalStateException("Internal APNS file version doesn't match "
++                            + confFile.getAbsolutePath());
++                }
++
++                loadApnsWithNumeric(db, confparser, numeric);
++            } catch (FileNotFoundException e) {
++                // It's ok if the file isn't found. It means there isn't a confidential file
++                // Log.e(TAG, "File not found: '" + confFile.getAbsolutePath() + "'");
++            } catch (Exception e) {
++                loge("initDatabase: Exception while parsing '" + confFile.getAbsolutePath() + "'" +
++                        e);
++            } finally {
++                // Get rid of user/carrier deleted entries that are not present in apn xml file.
++                // Those entries have edited value USER_DELETED/CARRIER_DELETED.
++                if (VDBG) {
++                    log("initDatabase: deleting USER_DELETED and replacing "
++                            + "DELETED_BUT_PRESENT_IN_XML with DELETED");
++                }
++
++                // Delete USER_DELETED
++                db.delete(CARRIERS_TABLE, IS_USER_DELETED + " or " + IS_CARRIER_DELETED, null);
++
++                // Change USER_DELETED_BUT_PRESENT_IN_XML to USER_DELETED
++                ContentValues cv = new ContentValues();
++                cv.put(EDITED, USER_DELETED);
++                db.update(CARRIERS_TABLE, cv, IS_USER_DELETED_BUT_PRESENT_IN_XML, null);
++
++                // Change CARRIER_DELETED_BUT_PRESENT_IN_XML to CARRIER_DELETED
++                cv = new ContentValues();
++                cv.put(EDITED, CARRIER_DELETED);
++                db.update(CARRIERS_TABLE, cv, IS_CARRIER_DELETED_BUT_PRESENT_IN_XML, null);
++
++                if (confreader != null) {
++                    try {
++                        confreader.close();
++                    } catch (IOException e) {
++                        // do nothing
++                    }
++                }
++
++                // Update the stored checksum
++                setApnConfChecksum(getChecksum(confFile));
++            }
++            if (VDBG) log("dbh.initDatabase:- db=" + db);
++        }
++
+         private File getNewerFile(File sysApnFile, File altApnFile) {
+             if (altApnFile.exists()) {
+                 // Alternate file exists. Use the newer one.
+@@ -1397,6 +1475,38 @@ public class TelephonyProvider extends ContentProvider
+             }
+         }
+ 
++        private void loadApnsWithNumeric(SQLiteDatabase db, XmlPullParser parser, String numeric) {
++            if (parser != null) {
++                try {
++                    db.beginTransaction();
++                    XmlUtils.nextElement(parser);
++                    while (parser.getEventType() != XmlPullParser.END_DOCUMENT) {
++                        String apnNumeric = parser.getAttributeValue(null, "mcc")
++                                + parser.getAttributeValue(null, "mnc");
++                        ContentValues row = null;
++                        if (numeric.equals(apnNumeric)) {
++                            row = getRow(parser);
++                            if (row == null) {
++                                throw new XmlPullParserException("Expected 'apn' tag", parser, null);
++                            }
++                            insertAddingDefaults(db, row);
++                        }
++                        XmlUtils.nextElement(parser);
++                    }
++                    db.setTransactionSuccessful();
++                    log("insert numeric=" + numeric + "apn finish");
++                } catch (XmlPullParserException e) {
++                    loge("Got XmlPullParserException while loading apns." + e);
++                } catch (IOException e) {
++                    loge("Got IOException while loading apns." + e);
++                } catch (SQLException e) {
++                    loge("Got SQLException while loading apns." + e);
++                } finally {
++                    db.endTransaction();
++                }
++            }
++        }
++
+         static public ContentValues setDefaultValue(ContentValues values) {
+             if (!values.containsKey(SUBSCRIPTION_ID)) {
+                 int subId = SubscriptionManager.getDefaultSubscriptionId();
+@@ -1691,6 +1801,9 @@ public class TelephonyProvider extends ContentProvider
+     void initDatabaseWithDatabaseHelper(SQLiteDatabase db) {
+         mOpenHelper.initDatabase(db);
+     }
++    void initDatabaseWithNumeric(SQLiteDatabase db,String numeric) {
++        mOpenHelper.initDatabaseWithNumeric(db, numeric);
++    }
+     boolean needApnDbUpdate() {
+         return mOpenHelper.apnDbUpdateNeeded();
+     }
+@@ -2655,6 +2768,13 @@ public class TelephonyProvider extends ContentProvider
+     private void restoreDefaultAPN(int subId) {
+         /* SPRD:739737 Increase exception capture @{ */
+         SQLiteDatabase db = null;
++        TelephonyManager telephonyManager =
++                (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
++        String numeric = telephonyManager.getSimOperator(subId);
++        String where = null;
++        if (!TextUtils.isEmpty(numeric)) {
++            where = NUMERIC + "='" + numeric +"'";
++        }
+         try {
+             db = getWritableDatabase();
+         }catch(SQLException e) {
+@@ -2662,9 +2782,10 @@ public class TelephonyProvider extends ContentProvider
+             return;
+         }
+         /* @} */
++        log("restoreDefaultAPN: where: " + where);
+ 
+         try {
+-            db.delete(CARRIERS_TABLE, null, null);
++            db.delete(CARRIERS_TABLE, where, null);
+         } catch (SQLException e) {
+             loge("got exception when deleting to restore: " + e);
+         }
+@@ -2685,8 +2806,11 @@ public class TelephonyProvider extends ContentProvider
+ 
+         if (apnSourceServiceExists(getContext())) {
+             restoreApnsWithService();
+-        } else {
++        } else if (TextUtils.isEmpty(numeric)) {
+             initDatabaseWithDatabaseHelper(db);
++        } else {
++            log("initDatabaseWithNumeric: numeric: " + numeric);
++            initDatabaseWithNumeric(db, numeric);
+         }
+     }
+ 

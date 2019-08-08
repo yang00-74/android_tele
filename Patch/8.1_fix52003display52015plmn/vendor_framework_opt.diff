@@ -1,0 +1,41 @@
+diff --git a/src/java/com/android/internal/telephony/OperatorNameHandler.java b/src/java/com/android/internal/telephony/OperatorNameHandler.java
+index fdcc439..44b181f 100644
+--- a/src/java/com/android/internal/telephony/OperatorNameHandler.java
++++ b/src/java/com/android/internal/telephony/OperatorNameHandler.java
+@@ -127,9 +127,36 @@
+                     Rlog.d(LOG_TAG, "get higher priority plmn from xml : " + highPriorityPlmn);
+             }
+         }
++
++        highPriorityPlmn = plmnIgnoreDisplayRule(phoneId , mccmnc , highPriorityPlmn);
++
+         return TextUtils.isEmpty(highPriorityPlmn) ? mccmnc : highPriorityPlmn;
+     }
+ 
++    //SPRD:Add for Bug949130, When the cards of cards 52001 and 52003 are registered in the 52015 network,
++    //the PLMN is displayed as AIS-T.
++    private String plmnIgnoreDisplayRule(int phoneId, String mccmnc,String highPriorityPlmn) {
++        SubscriptionController controller = SubscriptionController.getInstance();
++        int subId = controller.getSubIdUsingPhoneId(phoneId);
++        if (SubscriptionManager.isValidSubscriptionId(subId)) {
++            CarrierConfigManagerEx configManagerEx = CarrierConfigManagerEx.from(mContext);
++            if (configManagerEx != null) {
++                PersistableBundle persistableBundle = configManagerEx.getConfigForSubId(subId);
++                if (persistableBundle != null) {
++                    String specialPlmn = persistableBundle.getString(CarrierConfigManagerEx.KEY_NETWORK_NAME_IGNORE_RULES);
++                    if (!TextUtils.isEmpty(specialPlmn)) {
++                        String[] specialPlmnInfo = specialPlmn.split("@");
++                        if (specialPlmnInfo.length == 2
++                                && mccmnc.equals(specialPlmnInfo[0])) {
++                            return specialPlmnInfo[1];
++                        }
++                    }
++                }
++            }
++        }
++        return highPriorityPlmn;
++    }
++
+     //SPRD:Modify the Bug837237,get cellLocation quickly.
+     private CellLocation getCellLocation(int phoneId) {
+         Phone phone = PhoneFactory.getPhone(phoneId);

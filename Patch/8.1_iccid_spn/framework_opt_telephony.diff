@@ -1,0 +1,24 @@
+diff --git a/src/java/com/android/internal/telephony/SubscriptionController.java b/src/java/com/android/internal/telephony/SubscriptionController.java
+index 2100751..bb244a4 100755
+--- a/src/java/com/android/internal/telephony/SubscriptionController.java
++++ b/src/java/com/android/internal/telephony/SubscriptionController.java
+@@ -1042,6 +1042,19 @@
+                     nameToSet = "SIM " + Integer.toString(slotIndex + 1);
+                 }
+ 
++                String currentNumeric = mTelephonyManager.getSimOperatorNumeric(slotIndex);
++                if (null != currentNumeric &&
++                        (currentNumeric.equals("46001") || currentNumeric.equals("46002"))) {
++                    int ecid = Integer.valueOf(iccId.substring(8, 9));
++                    if (ecid == 1) {
++                        nameToSet = "UNEFON";
++                    } else {
++                        nameToSet = "AT&T";
++                    }
++                    logd("asd modify spn=" + nameToSet);
++                    mTelephonyManager.setSimOperatorNameForPhone(slotIndex, nameToSet);
++                }
++
+                 ContentValues value = new ContentValues();
+                 value.put(SubscriptionManager.DISPLAY_NAME, nameToSet);
+                 resolver.update(SubscriptionManager.CONTENT_URI, value,

@@ -1,0 +1,44 @@
+diff --git a/src/com/android/settings/datausage/DataUsageSummary.java b/src/com/android/settings/datausage/DataUsageSummary.java
+index ad95d1a..9039cb0 100644
+--- a/src/com/android/settings/datausage/DataUsageSummary.java
++++ b/src/com/android/settings/datausage/DataUsageSummary.java
+@@ -213,6 +213,8 @@ public class DataUsageSummary extends DataUsageBase implements Indexable, DataUs
+                                     mBillingCyclePreferences[i].updateEnabled();
+                                     /* @} */
+                                 }
++                                mCellDataPreferences[i].setEnabled(services.mTelephonyManager
++                                        .isPolicyDataEnabled(mCellDataPreferences[i].mSubId));
+                             }
+                         }
+                         /* @} */
+@@ -457,6 +459,7 @@ public class DataUsageSummary extends DataUsageBase implements Indexable, DataUs
+         if (mCellDataPreferences != null && mSubscriptionInfos != null) {
+             /* SPRD: Bug 837888 @{ */
+             int defaultDataSubId = SubscriptionManager.getDefaultDataSubscriptionId();
++            TelephonyManager telephonyManager = TelephonyManager.from(getPrefContext());
+             for (int i = 0; i < mCellDataPreferences.length; i++) {
+                 if (i < mSubscriptionInfos.size()) {
+                     SubscriptionInfo subscriptionInfo = mSubscriptionInfos.get(i);
+@@ -465,17 +468,20 @@ public class DataUsageSummary extends DataUsageBase implements Indexable, DataUs
+                     //added for bug 875251, fresh the billcycle status
+                     mBillingCyclePreferences[i].updateEnabled();
+                     if (subId != defaultDataSubId && mUserManager != null) {
+-                        mCellDataPreferences[i].setEnabled(isEnabled && mUserManager.isAdminUser());
++                        mCellDataPreferences[i].setEnabled(isEnabled && mUserManager.isAdminUser()
++                                && telephonyManager.isPolicyDataEnabled(subId));
+                         continue;
+                     }
+                     /* @}*/
+-                    mCellDataPreferences[i].setEnabled(isEnabled);
++                    mCellDataPreferences[i].setEnabled(isEnabled
++                            && telephonyManager.isPolicyDataEnabled(subId));
+                 }
+             }
+         }
+     }
+     /* @}*/
+ 
++
+     @Override
+     public int getMetricsCategory() {
+         return MetricsEvent.DATA_USAGE_SUMMARY;

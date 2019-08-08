@@ -1,0 +1,13 @@
+diff --git a/src/com/android/settings/sim/DataPreference.java b/src/com/android/settings/sim/DataPreference.java
+index cdbd499..b6da083 100644
+--- a/src/com/android/settings/sim/DataPreference.java
++++ b/src/com/android/settings/sim/DataPreference.java
+@@ -70,7 +70,7 @@ public class DataPreference extends MasterSwitchPreference {
+                     .getSimStateForSlotIndex(phoneId) == TelephonyManager.SIM_STATE_READY)
+                     && !WirelessUtils.isAirplaneModeOn(mContext);
+             Log.d("DataPreference","updateDataSwitch canSetDataEnable ="+canSetDataEnable +",isDataEnable="+isDataEnable);
+-            setSwitchEnabled(canSetDataEnable);
++            setSwitchEnabled(canSetDataEnable && tm.isPolicyDataEnabled(dataSubId));
+         }
+     }
+ 

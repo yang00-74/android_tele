@@ -1,0 +1,100 @@
+diff --git a/old/frameworks/opt/telephony/src/java/com/android/internal/telephony/ServiceStateTracker.java b/new/frameworks/opt/telephony/src/java/com/android/internal/telephony/ServiceStateTracker.java
+index 755365d..b93633d 100644
+--- a/old/frameworks/opt/telephony/src/java/com/android/internal/telephony/ServiceStateTracker.java
++++ b/new/frameworks/opt/telephony/src/java/com/android/internal/telephony/ServiceStateTracker.java
+@@ -2494,6 +2494,11 @@ public class ServiceStateTracker extends Handler {
+         // If we want it on and it's off, turn it on
+         if (mDesiredPowerState && !mRadioDisabledByCarrier
+                 && mCi.getRadioState() == CommandsInterface.RadioState.RADIO_OFF) {
++            //SPRD: ADD
++            if(mPhone.getPhoneId() == 1 && SystemProperties.getBoolean("gsm.expiresim.off", false)) {
++                log("bairj---unable to turn on sim2 because of sim1 is expired sim");
++                return;
++            }
+             mCi.setRadioPower(true, null);
+         } else if ((!mDesiredPowerState || mRadioDisabledByCarrier) && mCi.getRadioState().isOn()) {
+             // If it's on and available and we want it off gracefully
+diff --git a/old/vendor/sprd/platform/packages/services/Telephony/src/com/android/phone/PhoneGlobalsEx.java b/new/vendor/sprd/platform/packages/services/Telephony/src/com/android/phone/PhoneGlobalsEx.java
+index ac6309d..cb69992 100644
+--- a/old/vendor/sprd/platform/packages/services/Telephony/src/com/android/phone/PhoneGlobalsEx.java
++++ b/new/vendor/sprd/platform/packages/services/Telephony/src/com/android/phone/PhoneGlobalsEx.java
+@@ -97,11 +97,13 @@ public class PhoneGlobalsEx extends ContextWrapper {
+         registerReceiver(mUnlockScreenReceiver, simlockIntentFilter);
+ 
+         mSimLockManager = SimLockManager.getInstance(mContext, R.string.feature_support_simlock);
+-        if (SystemProperties.getBoolean("ro.simlock.unlock.autoshow", true)
++        //SPRD: ADD
++        /*if (SystemProperties.getBoolean("ro.simlock.unlock.autoshow", true)
+                 && !SystemProperties.getBoolean("ro.simlock.onekey.lock", false)
+                 && !SystemProperties.getBoolean("ro.simlock.unlock.bynv", false)) {
+             mSimLockManager.registerForSimLocked(mContext);
+-        }
++        }*/
++        mSimLockManager.registerForSimLocked(mContext);
+         /* @} */
+         // SPRD: Add for fast shutdown
+         FastShutdownHelper.init(this);
+diff --git a/old/vendor/sprd/plugins/packages/services/Telephony/addons/SimLockSupport/src/plugin/sprd/simlock/SimLockManagerPlugin.java b/new/vendor/sprd/plugins/packages/services/Telephony/addons/SimLockSupport/src/plugin/sprd/simlock/SimLockManagerPlugin.java
+index 409a0fd..f6cb583 100644
+--- a/old/vendor/sprd/plugins/packages/services/Telephony/addons/SimLockSupport/src/plugin/sprd/simlock/SimLockManagerPlugin.java
++++ b/new/vendor/sprd/plugins/packages/services/Telephony/addons/SimLockSupport/src/plugin/sprd/simlock/SimLockManagerPlugin.java
+@@ -98,12 +98,14 @@ public class SimLockManagerPlugin extends SimLockManager implements AddonManager
+                                 if (SystemProperties.getBoolean("ro.simlock.unlock.autoshow", true)
+                                         && !SystemProperties.getBoolean("ro.simlock.onekey.lock", false)
+                                         && !SystemProperties.getBoolean("ro.simlock.unlock.bynv", false)) {
++                                    Log.d(TAG, "bairj---autoshow----in");
+                                     showPanel(mAddonContext, msg);
+                                 }
+                             }
+                             @Override
+                             public void onExpireSimEvent(Object object){
+-                                Log.d(TAG, "onExpireSimEvent");
++                                Log.d(TAG, "bairj---onExpireSimEvent");
++                                turnOffSim2IfNeeded(object);
+                             }
+                         };
+                         mRadioInteractor.listen(mCallbackListener[i],
+@@ -459,6 +461,43 @@ public class SimLockManagerPlugin extends SimLockManager implements AddonManager
+         ndpPanel.show();
+     }
+ 
++    //SPRD: ADD
++    private static final int DUMMY2_EXPIRESIM_SLOT_DEPEND1 = 7;
++    private static String[] mWhiteSimList = {"45204","45608","45703","37203","64303","71615","51403","62404","64208","64009"};
++
++    private void turnOffSim2IfNeeded(Object object) {
++        AsyncResult ar = (AsyncResult) object;
++        if (ar.exception == null && ar.result != null) {
++            int result = (int) ar.result;
++            Log.d(TAG, "bairj---expire sim = " + result);
++            if (result == 0) {
++                int[] dummys = mRadioInteractor.getSimlockDummys(0);
++                int dummy2 = -1;
++                if(dummys!= null && dummys.length == 8){
++                    dummy2 = dummys[1];
++                    Log.d(TAG, "bairj---dummy2 = " + dummy2);
++                }
++                if(dummy2 == DUMMY2_EXPIRESIM_SLOT_DEPEND1){
++                    Log.d(TAG, "bairj---need turn off sim2");
++                    String numeric = mTelephonyManager.getSimOperatorNumericForPhone(1);
++                    Log.d(TAG, "bairj---numeric = " + numeric);
++                    int whiteSimCount = 0;
++                    for (String whitesim : mWhiteSimList) {
++                        if (whitesim.equals(numeric)) {
++                            whiteSimCount++;
++                        }
++                    }
++                    if (whiteSimCount == 0) {
++                        Log.d(TAG, "bairj---not whiteSim---in");
++                        Phone phone = PhoneFactory.getPhone(1);
++                        phone.setRadioPower(false);
++                        SystemProperties.set("gsm.expiresim.off", "1");
++                    }
++                }
++            }
++        }
++    }
++
+     private byte mSimAbsentFlag = 0;
+     private BroadcastReceiver mSimStateReceiver = new BroadcastReceiver() {
+         public void onReceive(Context context, Intent intent) {

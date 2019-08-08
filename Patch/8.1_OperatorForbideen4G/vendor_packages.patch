@@ -1,0 +1,13 @@
+diff --git a/src/com/android/phone/ExtendedNetworkSettings.java b/src/com/android/phone/ExtendedNetworkSettings.java
+index a14cc1f..5604d01 100644
+--- a/src/com/android/phone/ExtendedNetworkSettings.java
++++ b/src/com/android/phone/ExtendedNetworkSettings.java
+@@ -166,7 +166,7 @@ public class ExtendedNetworkSettings implements Preference.OnPreferenceChangeLis
+             if (!isAllowedToShowNetworkTypeOption(phoneSubId)) {
+                 mPrefSet.removePreference(mButtonEnabledNetworks);
+             } else {
+-                if (isSupportLTE(phoneSubId)) {
++                if (isSupportLTE(phoneSubId) && !TeleUtils.isOperatorForbidden4G(phoneSubId)) {
+                     if(isHave3GOption(phoneSubId)){
+                         mButtonEnabledNetworks.setEntries(R.array.enabled_networks_add3g_choices);
+                         mButtonEnabledNetworks.setEntryValues(R.array.enabled_networks_add3g_values);

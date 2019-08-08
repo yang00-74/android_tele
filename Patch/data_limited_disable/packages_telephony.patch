@@ -1,0 +1,14 @@
+diff --git a/src/com/android/phone/MobileNetworkSettings.java b/src/com/android/phone/MobileNetworkSettings.java
+index b4ed586..453bba1 100644
+--- a/src/com/android/phone/MobileNetworkSettings.java
++++ b/src/com/android/phone/MobileNetworkSettings.java
+@@ -1378,6 +1378,9 @@ public class MobileNetworkSettings extends Activity  {
+                 mMobileDataPref.setEnabled(isCallStateIdle() && hasActiveSub
+                         && shouldEnableData);
+             }
++            if (!mTelephonyManager.isPolicyDataEnabled(currentTabSubId)) {
++                mMobileDataPref.setEnabled(false);
++            }
+         }
+         /* @} */
+ 

@@ -1,0 +1,16 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java b/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java
+index 940ff2e..f77b898 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java
+@@ -217,6 +217,11 @@ public class DataConnectionTile extends QSTileImpl<BooleanState> {
+ 
+     @Override
+     protected void handleClick() {
++        int subId = SubscriptionManager.getDefaultDataSubscriptionId();
++        if (!TelephonyManager.from(mContext).isPolicyDataEnabled(subId)) {
++            android.util.Log.d("DataConnectionTile", "isPolicyData off, reutrn");
++            return;
++        }
+         /* SPRD: add for bug869206@{ */
+         Log.d(TAG, "handleClick mHasEvent : " + mHasEvent);
+         if (mHasEvent) {

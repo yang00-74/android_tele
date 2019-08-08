@@ -1,0 +1,15 @@
+diff --git a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+index 1ada674..f899940 100644
+--- a/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
++++ b/src/java/com/android/internal/telephony/SubscriptionInfoUpdater.java
+@@ -482,6 +482,10 @@ public class SubscriptionInfoUpdater extends Handler {
+ 
+                 if (storedSubId != subId) {
+                     int networkType = RILConstants.PREFERRED_NETWORK_MODE;
++                    if (TeleUtils.isOperatorForbidden4G(subId)) {
++                        networkType = RILConstants.NETWORK_MODE_WCDMA_PREF;
++                        logd("isOperatorForbidden4G = true,set networkType =" + networkType);
++                    }
+                     // Set the modem network mode
+                     mPhone[slotId].setPreferredNetworkType(networkType, null);
+                     Settings.Global.putInt(mPhone[slotId].getContext().getContentResolver(),

@@ -1,0 +1,15 @@
+diff --git a/src/java/com/android/internal/telephony/DataEnableController.java b/src/java/com/android/internal/telephony/DataEnableController.java
+index cc79995..632b1b5 100644
+--- a/src/java/com/android/internal/telephony/DataEnableController.java
++++ b/src/java/com/android/internal/telephony/DataEnableController.java
+@@ -112,8 +112,8 @@ public class DataEnableController extends ContextWrapper {
+                     + SubscriptionManager.MAX_SUBSCRIPTION_ID_VALUE) != 0;
+         } catch (SettingNotFoundException e) {
+             Settings.Global.putInt(mContext.getContentResolver(),
+-                    Settings.Global.MOBILE_DATA + SubscriptionManager.MAX_SUBSCRIPTION_ID_VALUE, 1);
+-            return true;
++                    Settings.Global.MOBILE_DATA + SubscriptionManager.MAX_SUBSCRIPTION_ID_VALUE, 0);
++            return false;
+         }
+     }
+ 

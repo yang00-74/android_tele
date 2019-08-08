@@ -1,0 +1,751 @@
+From 29d90c33790b7c8ffab37a3e91505b9592aec944 Mon Sep 17 00:00:00 2001
+From: nielei0720 <nielei0720@spreadst.com>
+Date: Fri, 25 May 2018 11:40:28 +0800
+Subject: [PATCH] Bug #875760 vadafone pre & post APN
+
+[root cause  ] 875760 vadafone pre & post APN
+[changes     ] 875760 vadafone pre & post APN
+[side effects] no
+[self test   ]: no
+[download normally]: no
+[power on/off normally]: no
+[do common repository/branch inspection]: no
+[is there dependence]: no
+[confirm dependent commit]: no
+[board]: 8.1
+[test case]: no
+[reviewers   ] no
+[change_type ] bugfix
+[tag_product ] common
+
+Change-Id: Icacf9bc7a028ed39c6a62c1f90317ff09c7a4828
+---
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 10e5b61..5a81b79 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -3660,5 +3660,19 @@
+                 <action android:name="com.sprd.fingerprint.startBIOManager" />
+             </intent-filter>
+         </receiver>
++
++        <activity
++            android:name="com.android.settings.sim.APNAdapteActivity"
++            android:configChanges="orientation|screenSize|keyboardHidden"
++            android:theme="@style/TransparentNoTitleStyle">
++        </activity>
++        <receiver
++            android:name="com.android.settings.sim.ApnAdapteReceiver" >
++            <intent-filter>
++                <action android:name="android.intent.action.SHOW_APN_ADAPTE_ACTION" />
++                <action android:name="android.intent.action.SIM_STATE_CHANGED"/>
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++        </receiver>
+     </application>
+ </manifest>
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index 9f0e3b7..d02e59b 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -9102,4 +9102,11 @@
+     <string name="current_label_phone">Phone</string>
+     <!-- SPRD: modify for bug 754830 -->
+     <string name="sim_calls_not_set_up">Not set up</string>
++
++    <string name="apnset_title">Preset profile detected</string>
++    <string name="apnset_message">Preset profile detected \nApply and replace \nPrevious profile?</string>
++    <string name="apn_list_title">Set Access Point Name</string>
++    <string name="apn_no_prefer_apn">Current sim card has no prefer APN.</string>
++    <string name="apn_ok">Yes</string>
++    <string name="apn_cancle">No</string>
+ </resources>
+diff --git a/res/values/styles.xml b/res/values/styles.xml
+index f3e16bf..e49717c 100644
+--- a/res/values/styles.xml
++++ b/res/values/styles.xml
+@@ -473,4 +473,8 @@
+         <item name="android:textSize">@dimen/search_bar_text_size</item>
+     </style>
+ 
++    <style name="TransparentNoTitleStyle" parent="@android:style/Theme.Holo.Light.Dialog">
++        <item name="android:windowNoTitle">true</item>
++        <item name="android:windowIsTranslucent">true</item>
++    </style>
+ </resources>
+diff --git a/res/xml/apn_editor.xml b/res/xml/apn_editor.xml
+index 60f3a7d..d872cde 100644
+--- a/res/xml/apn_editor.xml
++++ b/res/xml/apn_editor.xml
+@@ -151,13 +151,6 @@
+         android:summaryOff="@@string/carrier_enabled_summaryOff"
+         android:persistent="false"
+         />
+-    <MultiSelectListPreference
+-        android:title="@string/bearer"
+-        android:key="bearer_multi"
+-        android:entries="@array/bearer_entries"
+-        android:entryValues="@array/bearer_values"
+-        android:persistent="false"
+-        />
+     <ListPreference
+         android:title="@string/mvno_type"
+         android:key="mvno_type"
+diff --git a/src/com/android/settings/ApnEditor.java b/src/com/android/settings/ApnEditor.java
+index 29d60d7..90f47fa 100644
+--- a/src/com/android/settings/ApnEditor.java
++++ b/src/com/android/settings/ApnEditor.java
+@@ -105,7 +105,7 @@
+     private ListPreference mProtocol;
+     private ListPreference mRoamingProtocol;
+     private SwitchPreference mCarrierEnabled;
+-    private MultiSelectListPreference mBearerMulti;
++    //private MultiSelectListPreference mBearerMulti;
+     private ListPreference mMvnoType;
+     private EditTextPreference mMvnoMatchData;
+ 
+@@ -120,7 +120,7 @@
+     private Resources mRes;
+     private TelephonyManager mTelephonyManager;
+     private TelephonyManagerEx mTelephonyManagerEx;
+-    private int mBearerInitialVal = 0;
++    //private int mBearerInitialVal = 0;
+     private String mMvnoTypeStr;
+     private String mMvnoMatchDataStr;
+     private String[] mReadOnlyApnTypes;
+@@ -215,7 +215,8 @@
+         mProtocol = (ListPreference) findPreference(KEY_PROTOCOL);
+         mRoamingProtocol = (ListPreference) findPreference(KEY_ROAMING_PROTOCOL);
+         mCarrierEnabled = (SwitchPreference) findPreference(KEY_CARRIER_ENABLED);
+-        mBearerMulti = (MultiSelectListPreference) findPreference(KEY_BEARER_MULTI);
++        //mBearerMulti = (MultiSelectListPreference) findPreference(KEY_BEARER_MULTI);
++        //removePreference(KEY_BEARER_MULTI);
+         mMvnoType = (ListPreference) findPreference(KEY_MVNO_TYPE);
+         mMvnoMatchData = (EditTextPreference) findPreference("mvno_match_data");
+ 
+@@ -442,9 +443,9 @@
+                 return mRoamingProtocol;
+             case Telephony.Carriers.CARRIER_ENABLED:
+                 return mCarrierEnabled;
+-            case Telephony.Carriers.BEARER:
+-            case Telephony.Carriers.BEARER_BITMASK:
+-                return mBearerMulti;
++//            case Telephony.Carriers.BEARER:
++//            case Telephony.Carriers.BEARER_BITMASK:
++//                return mBearerMulti;
+             case Telephony.Carriers.MVNO_TYPE:
+                 return mMvnoType;
+             case Telephony.Carriers.MVNO_MATCH_DATA:
+@@ -488,7 +489,6 @@
+         mProtocol.setEnabled(false);
+         mRoamingProtocol.setEnabled(false);
+         mCarrierEnabled.setEnabled(false);
+-        mBearerMulti.setEnabled(false);
+         mMvnoType.setEnabled(false);
+         mMvnoMatchData.setEnabled(false);
+     }
+@@ -585,30 +585,30 @@
+             mProtocol.setValue(mCursor.getString(PROTOCOL_INDEX));
+             mRoamingProtocol.setValue(mCursor.getString(ROAMING_PROTOCOL_INDEX));
+             mCarrierEnabled.setChecked(mCursor.getInt(CARRIER_ENABLED_INDEX)==1);
+-            mBearerInitialVal = mCursor.getInt(BEARER_INDEX);
++//            mBearerInitialVal = mCursor.getInt(BEARER_INDEX);
+ 
+-            HashSet<String> bearers = new HashSet<String>();
+-            int bearerBitmask = mCursor.getInt(BEARER_BITMASK_INDEX);
+-            if (bearerBitmask == 0) {
+-                if (mBearerInitialVal == 0) {
+-                    bearers.add("" + 0);
+-                }
+-            } else {
+-                int i = 1;
+-                while (bearerBitmask != 0) {
+-                    if ((bearerBitmask & 1) == 1) {
+-                        bearers.add("" + i);
+-                    }
+-                    bearerBitmask >>= 1;
+-                    i++;
+-                }
+-            }
+-
+-            if (mBearerInitialVal != 0 && bearers.contains("" + mBearerInitialVal) == false) {
+-                // add mBearerInitialVal to bearers
+-                bearers.add("" + mBearerInitialVal);
+-            }
+-            mBearerMulti.setValues(bearers);
++//            HashSet<String> bearers = new HashSet<String>();
++//            int bearerBitmask = mCursor.getInt(BEARER_BITMASK_INDEX);
++//            if (bearerBitmask == 0) {
++//                if (mBearerInitialVal == 0) {
++//                    bearers.add("" + 0);
++//                }
++//            } else {
++//                int i = 1;
++//                while (bearerBitmask != 0) {
++//                    if ((bearerBitmask & 1) == 1) {
++//                        bearers.add("" + i);
++//                    }
++//                    bearerBitmask >>= 1;
++//                    i++;
++//                }
++//            }
++//
++//            if (mBearerInitialVal != 0 && bearers.contains("" + mBearerInitialVal) == false) {
++//                // add mBearerInitialVal to bearers
++//                bearers.add("" + mBearerInitialVal);
++//            }
++            //mBearerMulti.setValues(bearers);
+ 
+             mMvnoType.setValue(mCursor.getString(MVNO_TYPE_INDEX));
+             mMvnoMatchData.setEnabled(false);
+@@ -651,8 +651,8 @@
+         mProtocol.setSummary(checkNull(protocolDescription(mProtocol.getValue(), mProtocol)));
+         mRoamingProtocol.setSummary(
+                 checkNull(protocolDescription(mRoamingProtocol.getValue(), mRoamingProtocol)));
+-        mBearerMulti.setSummary(
+-                checkNull(bearerMultiDescription(mBearerMulti.getValues())));
++//        mBearerMulti.setSummary(
++//                checkNull(bearerMultiDescription(mBearerMulti.getValues())));
+         mMvnoType.setSummary(
+                 checkNull(mvnoDescription(mMvnoType.getValue())));
+         mMvnoMatchData.setSummary(checkNull(mMvnoMatchData.getText()));
+@@ -684,43 +684,43 @@
+         }
+     }
+ 
+-    private String bearerDescription(String raw) {
+-        int mBearerIndex = mBearerMulti.findIndexOfValue(raw);
+-        if (mBearerIndex == -1) {
+-            return null;
+-        } else {
+-            String[] values = mRes.getStringArray(R.array.bearer_entries);
+-            try {
+-                return values[mBearerIndex];
+-            } catch (ArrayIndexOutOfBoundsException e) {
+-                return null;
+-            }
+-        }
+-    }
++//    private String bearerDescription(String raw) {
++//        int mBearerIndex = mBearerMulti.findIndexOfValue(raw);
++//        if (mBearerIndex == -1) {
++//            return null;
++//        } else {
++//            String[] values = mRes.getStringArray(R.array.bearer_entries);
++//            try {
++//                return values[mBearerIndex];
++//            } catch (ArrayIndexOutOfBoundsException e) {
++//                return null;
++//            }
++//        }
++//    }
+ 
+-    private String bearerMultiDescription(Set<String> raw) {
+-        String[] values = mRes.getStringArray(R.array.bearer_entries);
+-        StringBuilder retVal = new StringBuilder();
+-        boolean first = true;
+-        for (String bearer : raw) {
+-            int bearerIndex = mBearerMulti.findIndexOfValue(bearer);
+-            try {
+-                if (first) {
+-                    retVal.append(values[bearerIndex]);
+-                    first = false;
+-                } else {
+-                    retVal.append(", " + values[bearerIndex]);
+-                }
+-            } catch (ArrayIndexOutOfBoundsException e) {
+-                // ignore
+-            }
+-        }
+-        String val = retVal.toString();
+-        if (!TextUtils.isEmpty(val)) {
+-            return val;
+-        }
+-        return null;
+-    }
++//    private String bearerMultiDescription(Set<String> raw) {
++//        String[] values = mRes.getStringArray(R.array.bearer_entries);
++//        StringBuilder retVal = new StringBuilder();
++//        boolean first = true;
++//        for (String bearer : raw) {
++//            int bearerIndex = mBearerMulti.findIndexOfValue(bearer);
++//            try {
++//                if (first) {
++//                    retVal.append(values[bearerIndex]);
++//                    first = false;
++//                } else {
++//                    retVal.append(", " + values[bearerIndex]);
++//                }
++//            } catch (ArrayIndexOutOfBoundsException e) {
++//                // ignore
++//            }
++//        }
++//        String val = retVal.toString();
++//        if (!TextUtils.isEmpty(val)) {
++//            return val;
++//        }
++//        return null;
++//    }
+ 
+     private String mvnoDescription(String newValue) {
+         int mvnoIndex = mMvnoType.findIndexOfValue(newValue);
+@@ -824,14 +824,14 @@
+             }
+             mRoamingProtocol.setSummary(protocol);
+             mRoamingProtocol.setValue((String) newValue);
+-        } else if (KEY_BEARER_MULTI.equals(key)) {
++        }/* else if (KEY_BEARER_MULTI.equals(key)) {
+             String bearer = bearerMultiDescription((Set<String>) newValue);
+             if (bearer == null) {
+                 return false;
+             }
+             mBearerMulti.setValues((Set<String>) newValue);
+             mBearerMulti.setSummary(bearer);
+-        } else if (KEY_MVNO_TYPE.equals(key)) {
++        }*/ else if (KEY_MVNO_TYPE.equals(key)) {
+             String mvno = mvnoDescription((String) newValue);
+             if (mvno == null) {
+                 return false;
+@@ -1118,38 +1118,38 @@
+             }
+         }
+ 
+-        Set<String> bearerSet = mBearerMulti.getValues();
+-        int bearerBitmask = 0;
+-        for (String bearer : bearerSet) {
+-            if (Integer.parseInt(bearer) == 0) {
+-                bearerBitmask = 0;
+-                break;
+-            } else {
+-                bearerBitmask |= ServiceState.getBitmaskForTech(Integer.parseInt(bearer));
+-            }
+-        }
+-        callUpdate = setIntValueAndCheckIfDiff(values,
+-                Telephony.Carriers.BEARER_BITMASK,
+-                bearerBitmask,
+-                callUpdate,
+-                BEARER_BITMASK_INDEX);
+-
+-        int bearerVal;
+-        if (bearerBitmask == 0 || mBearerInitialVal == 0) {
+-            bearerVal = 0;
+-        } else if (ServiceState.bitmaskHasTech(bearerBitmask, mBearerInitialVal)) {
+-            bearerVal = mBearerInitialVal;
+-        } else {
+-            // bearer field was being used but bitmask has changed now and does not include the
+-            // initial bearer value -- setting bearer to 0 but maybe better behavior is to choose a
+-            // random tech from the new bitmask??
+-            bearerVal = 0;
+-        }
+-        callUpdate = setIntValueAndCheckIfDiff(values,
+-                Telephony.Carriers.BEARER,
+-                bearerVal,
+-                callUpdate,
+-                BEARER_INDEX);
++//        Set<String> bearerSet = mBearerMulti.getValues();
++//        int bearerBitmask = 0;
++//        for (String bearer : bearerSet) {
++//            if (Integer.parseInt(bearer) == 0) {
++//                bearerBitmask = 0;
++//                break;
++//            } else {
++//                bearerBitmask |= ServiceState.getBitmaskForTech(Integer.parseInt(bearer));
++//            }
++//        }
++//        callUpdate = setIntValueAndCheckIfDiff(values,
++//                Telephony.Carriers.BEARER_BITMASK,
++//                bearerBitmask,
++//                callUpdate,
++//                BEARER_BITMASK_INDEX);
++//
++//        int bearerVal;
++//        if (bearerBitmask == 0 || mBearerInitialVal == 0) {
++//            bearerVal = 0;
++//        } else if (ServiceState.bitmaskHasTech(bearerBitmask, mBearerInitialVal)) {
++//            bearerVal = mBearerInitialVal;
++//        } else {
++//            // bearer field was being used but bitmask has changed now and does not include the
++//            // initial bearer value -- setting bearer to 0 but maybe better behavior is to choose a
++//            // random tech from the new bitmask??
++//            bearerVal = 0;
++//        }
++//        callUpdate = setIntValueAndCheckIfDiff(values,
++//                Telephony.Carriers.BEARER,
++//                bearerVal,
++//                callUpdate,
++//                BEARER_INDEX);
+ 
+         callUpdate = setStringValueAndCheckIfDiff(values,
+                 Telephony.Carriers.MVNO_TYPE,
+diff --git a/src/com/android/settings/sim/APNAdapteActivity.java b/src/com/android/settings/sim/APNAdapteActivity.java
+new file mode 100644
+index 0000000..6181052
+--- /dev/null
++++ b/src/com/android/settings/sim/APNAdapteActivity.java
+@@ -0,0 +1,303 @@
++package com.android.settings.sim;
++
++import java.util.ArrayList;
++import android.app.Activity;
++import android.app.AlertDialog;
++import android.app.AlertDialog.Builder;
++import android.app.Dialog;
++import android.content.BroadcastReceiver;
++import android.content.ContentResolver;
++import android.content.ContentValues;
++import android.content.Context;
++import android.content.DialogInterface;
++import android.content.Intent;
++import android.content.IntentFilter;
++import android.database.Cursor;
++import android.net.Uri;
++import android.os.Bundle;
++import android.os.SystemProperties;
++import android.telephony.SubscriptionManager;
++import android.telephony.TelephonyManager;
++import android.text.TextUtils;
++import android.util.Log;
++import android.view.KeyEvent;
++import android.view.View;
++import android.view.View.OnClickListener;
++import android.view.View.OnKeyListener;
++import android.widget.AdapterView;
++import android.widget.AdapterView.OnItemClickListener;
++import android.widget.ArrayAdapter;
++import android.widget.ListView;
++import android.widget.Toast;
++import com.android.settings.R;
++import com.android.internal.telephony.PhoneConstants;
++import com.android.internal.telephony.TelephonyIntents;
++import com.android.internal.telephony.TelephonyProperties;
++import android.telephony.SubscriptionInfo;
++
++/**
++ +*
++ +*This Activity is added by SPRD 2016-01-14 for ZTE Europe Request
++ +*/
++
++public class APNAdapteActivity extends Activity {
++    private static final String TAG = "APNAdapteActivity";
++    private static final boolean DBG = true;
++    private Context mContext = null;
++    protected ArrayList<APNType> mApnList = null;
++    protected Dialog mAlertDialog;
++    protected Dialog mChooseAlertDialog;
++    private TelephonyManager mTelephonyManager = null;
++
++    private int mPhoneId;
++    public static final String APN_ID = "apn_id";
++    public static final String STR_CONTENT_URI = "content://telephony/carriers";
++    public static final String PREFERRED_APN_URI = "content://telephony/carriers/preferapn";
++    public static final Uri CONTENT_URI = Uri.parse(STR_CONTENT_URI);
++    public static final Uri PREFERAPN_URI = Uri.parse(PREFERRED_APN_URI);
++    public static final String DEFAULT_SORT_ORDER = "name ASC";
++    public static final String PATH_PREFERAPN = "preferapn";
++
++    public static final String BOOT_ADAPTE_APN = "boot_adapte_apn";
++
++    private static final int LOG_TYPE_INFO = 0;
++    private static final int LOG_TYPE_ERROR = 1;
++
++    private static final int UPDATE_DETECTED_DATA = 0;
++    private static final int UPDATE_CHOOSE_DATA = 1;
++
++    private static final int ID_INDEX = 0;
++    private static final int NAME_INDEX = 1;
++    private static final int APN_INDEX = 2;
++    private static final int TYPES_INDEX = 3;
++    private static final int MVNO_TYPE = 4;
++    private static final int MVNO_MATCH_DATA = 5;
++    private boolean hasData = false;
++    private SubscriptionManager mSubscriptionManager;
++    @Override
++    protected void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setFinishOnTouchOutside(false);
++        mContext = this;
++        mSubscriptionManager = SubscriptionManager.from(mContext);
++        mPhoneId = SubscriptionManager.getPhoneId(mSubscriptionManager.getDefaultDataSubscriptionId());
++        mTelephonyManager = new TelephonyManager(APNAdapteActivity.this);
++        /**
++         * Get the value that from @ApnAdapteReceiver,if it is null,so no need to prompt
++         * detected dialog
++         */
++        final String dialogFlag = getIntent().getStringExtra(BOOT_ADAPTE_APN);
++        /**
++         * As query is very fast, so no need to start a new thread to query
++         * */
++        boolean hasData = updateAPNList(dialogFlag != null);
++        if (DBG)
++            log(LOG_TYPE_INFO, "Detected data : " + hasData + ", mPhoneId = " + mPhoneId);
++        if (!hasData) {
++            finish();
++        }
++    }
++    @Override
++    public void onResume() {
++        super.onResume();
++    }
++
++    private String getApnIdByPhoneId(int phoneId) {
++        switch (phoneId) {
++            case 0:
++                return APN_ID;
++            default:
++                return APN_ID + "_sim" + (phoneId + 1);
++        }
++    }
++
++    private boolean updateAPNList(boolean needPreparedDialog) {
++        String where = "";
++        Uri contentUri = Uri.parse(CONTENT_URI.toString());
++        final TelephonyManager tm = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
++        final String mccmnc = tm.getSimOperator();
++        Log.d(TAG, "mccmnc = " + mccmnc);
++        where = "numeric=\"" + mccmnc + "\"";
++        where += " and type like '%default%'";
++        log(LOG_TYPE_INFO, "Tony where = " + where);
++        Cursor cursor = getContentResolver().query(
++                contentUri,
++                new String[] { "_id", "name", "apn", "type", "mvno_type",
++                        "mvno_match_data" }, where, null, DEFAULT_SORT_ORDER);
++        mApnList = new ArrayList<APNType>();
++        if (cursor != null) {
++            log(LOG_TYPE_INFO, "cursor count : " + cursor.getCount());
++            cursor.moveToFirst();
++            while (!cursor.isAfterLast()) {
++                String name = cursor.getString(NAME_INDEX);
++                String apn = cursor.getString(APN_INDEX);
++                String key = cursor.getString(ID_INDEX);
++                String type = cursor.getString(TYPES_INDEX);
++                String mvnoType = cursor.getString(MVNO_TYPE);
++                String mvnoMatchData = cursor.getString(MVNO_MATCH_DATA);
++                /**
++                 * Only for Contract WAP and PAYG WAP apns can be add in apnlist
++                 **/
++                log(LOG_TYPE_INFO, "name : " + name );
++                if(!TextUtils.isEmpty(name) && ("Contract WAP".equals(name) ||
++                        "PAYG WAP".equals(name))){
++                    mApnList.add(new APNType(name, apn, key, type, mvnoType, mvnoMatchData));
++                }
++                cursor.moveToNext();
++            }
++            cursor.close();
++
++            if (mApnList.size() > 0) {
++                for (APNType apntype : mApnList) {
++                    log(LOG_TYPE_INFO, "apntype : " + apntype.toString() );
++                }
++            }
++        }
++
++        log(LOG_TYPE_INFO, "mApnList : " + mApnList.size() + ", needPreparedDialog = " + needPreparedDialog);
++
++        if (mApnList.size() > 0) {
++            hasData = true;
++            Dialog d = onCreateDialog(UPDATE_CHOOSE_DATA, null);
++            d.setCanceledOnTouchOutside(false);
++            d.show();
++        } else {
++            Toast.makeText(this, getResources().getString(R.string.apn_no_prefer_apn), Toast.LENGTH_LONG).show();
++        }
++        return hasData;
++    }
++
++    protected ArrayList<String> getSpnList(ArrayList<APNType> apnList) {
++        if (apnList.size() < 0)
++            return null;
++        ArrayList<String> spnList = new ArrayList<String>();
++        for (APNType apn : apnList) {
++            if(!TextUtils.isEmpty(apn.mvnoType) && !TextUtils.isEmpty(apn.mvnoMatchData)){
++                apn.name = apn.mvnoMatchData;
++            }
++            spnList.add(apn.name);
++        }
++        return spnList;
++    }
++    private Dialog preparedDialog() {
++        mAlertDialog = new Builder(this)
++                .setCancelable(false)
++                .setTitle(R.string.apnset_title)
++                .setMessage(R.string.apnset_message)
++                .setIcon(android.R.drawable.ic_dialog_info)
++                .setPositiveButton(R.string.apn_ok,
++                        new DialogInterface.OnClickListener() {
++                            @Override
++                            public void onClick(DialogInterface dialog,
++                                                int which) {
++                                mAlertDialog.dismiss();
++                                showDialog(UPDATE_CHOOSE_DATA, null);
++                            }
++                        })
++                .setNegativeButton(R.string.apn_cancle,
++                        new DialogInterface.OnClickListener() {
++
++                            public void onClick(DialogInterface dialog,
++                                                int which) {
++                                finish();
++                            }
++                        }).create();
++        return mAlertDialog;
++    }
++
++    @Override
++    @Deprecated
++    protected Dialog onCreateDialog(int id, Bundle bundle) {
++        switch (id) {
++            case UPDATE_CHOOSE_DATA:
++                ListView apnListView = new ListView(this);
++                apnListView.setAdapter(new ArrayAdapter<String>(mContext,
++                        android.R.layout.simple_expandable_list_item_1,
++                        getSpnList(mApnList)));
++                Builder builder = new Builder(this);
++                builder.setIcon(android.R.drawable.ic_dialog_info)
++                        .setTitle(R.string.apn_list_title).setView(apnListView);
++                mChooseAlertDialog = builder.create();
++                apnListView.setOnItemClickListener(new OnItemClickListener() {
++
++                    @Override
++                    public void onItemClick(AdapterView<?> arg0, View arg1,
++                                            int arg2, long arg3) {
++                        String mSelectedKey = ((APNType) mApnList.get(arg2)).key;
++                        if (DBG)
++                            log(LOG_TYPE_INFO, "ListView mSelectedKey : "
++                                    + mSelectedKey + ", id = " + arg2);
++                        ContentResolver resolver = getContentResolver();
++
++                        ContentValues values = new ContentValues();
++                        values.put(getApnIdByPhoneId(mPhoneId), mSelectedKey);
++                        resolver.update(PREFERAPN_URI, values, null, null);
++                        mChooseAlertDialog.dismiss();
++                        finish();
++                    }
++                });
++                apnListView.setOnKeyListener(new OnKeyListener() {
++                    @Override
++                    public boolean onKey(View arg0, int arg1, KeyEvent arg2) {
++                        if (arg2.getKeyCode() == KeyEvent.KEYCODE_BACK) {
++                            if(mAlertDialog != null && mAlertDialog.isShowing()){
++                                mChooseAlertDialog.dismiss();
++                            }
++                            finish();
++                            return true;
++                        }
++                        return false;
++                    }
++                });
++                return mChooseAlertDialog;
++
++            default:
++                break;
++        }
++        return super.onCreateDialog(id);
++    }
++
++    @Override
++    public void onPause() {
++        super.onPause();
++    }
++
++    protected void log(int logType, String message) {
++        switch (logType) {
++            case LOG_TYPE_INFO:
++                Log.i(TAG, message);
++                break;
++            case LOG_TYPE_ERROR:
++                Log.e(TAG, message);
++                break;
++            default:
++                Log.d(TAG, message);
++                break;
++        }
++    }
++
++    class APNType {
++        String name = null;
++        String apn = null;
++        String key = null;
++        String type = null;
++        String mvnoType = null;
++        String mvnoMatchData = null;
++
++        public APNType(String name, String apn, String key, String type,
++                       String mvnoType, String mvnoMatchData) {
++            this.name = name;
++            this.apn = apn;
++            this.key = key;
++            this.type = type;
++            this.mvnoType = mvnoType;
++            this.mvnoMatchData = mvnoMatchData;
++        }
++
++        public String toString() {
++            return "APN: " + this.name + " : " + this.apn + " : "
++                    + this.key + " : " + this.type + " : " + this.mvnoType
++                    + " : " + this.mvnoMatchData;
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/src/com/android/settings/sim/ApnAdapteReceiver.java b/src/com/android/settings/sim/ApnAdapteReceiver.java
+new file mode 100644
+index 0000000..a126e0c
+--- /dev/null
++++ b/src/com/android/settings/sim/ApnAdapteReceiver.java
+@@ -0,0 +1,54 @@
++package com.android.settings.sim;
++
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.telephony.SubscriptionManager;
++import android.telephony.TelephonyManager;
++import android.util.Log;
++import com.android.internal.telephony.IccCardConstants;
++import com.android.internal.telephony.PhoneConstants;
++import com.android.internal.telephony.TelephonyIntents;
++
++public class ApnAdapteReceiver extends BroadcastReceiver {
++    private static final String TAG = "ApnAdapteReceiver";
++    private static final String SHOW_APN_ADAPTE_ACTION = "android.intent.action.SHOW_APN_ADAPTE_ACTION";
++    private static boolean mBootCompleted = false;
++    private static boolean mSimLoaded = false;
++    @Override
++    public void onReceive(Context context, Intent intent) {
++        TelephonyManager mTelephonyManager = (TelephonyManager) context
++                .getSystemService(Context.TELEPHONY_SERVICE);
++        if (!mTelephonyManager.hasIccCard()) {
++            Log.d(TAG, "Has no card,so return");
++            return;
++        }
++        String action = intent.getAction();
++        String stateExtra = intent.getStringExtra(IccCardConstants.INTENT_KEY_ICC_STATE);
++        int slotId = intent.getIntExtra(PhoneConstants.SLOT_KEY, 0);
++        int subId = intent.getIntExtra(PhoneConstants.SUBSCRIPTION_KEY,
++                SubscriptionManager.INVALID_SUBSCRIPTION_ID);
++        Log.d(TAG, "ApnAdapteReceiver action = " + action);
++        if (action.equals(SHOW_APN_ADAPTE_ACTION)) {
++            mBootCompleted = true;
++        } else if(action.equals(TelephonyIntents.ACTION_SIM_STATE_CHANGED)) {
++            if (IccCardConstants.INTENT_VALUE_ICC_LOADED.equals(stateExtra)) {
++                int defaultDataSubId = SubscriptionManager.getDefaultDataSubscriptionId();
++                Log.d(TAG, "INTENT_VALUE_ICC_LOADED subId =" +subId
++                        + ",defaultDataSubId =" + defaultDataSubId);
++                if(subId == defaultDataSubId) {
++                    mSimLoaded = true;
++                }
++            }
++        }
++
++        Log.d(TAG, "mBootCompleted =" + mBootCompleted  + ",,mSimLoaded ="+ mSimLoaded);
++        if(mBootCompleted && mSimLoaded) {
++            Log.d(TAG, "receive broadcast : " + SHOW_APN_ADAPTE_ACTION);
++            Intent sentIntent = new Intent(context.getApplicationContext(), APNAdapteActivity.class);
++            sentIntent.putExtra(APNAdapteActivity.BOOT_ADAPTE_APN, "boot_adapte_apn");
++            sentIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++            context.startActivity(sentIntent);
++        }
++    }
++}
+\ No newline at end of file

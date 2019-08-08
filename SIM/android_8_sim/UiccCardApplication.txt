@@ -1,0 +1,1 @@
+ 一般一张卡里有多个application，比如CSIM，USIM, ISIM等等，  SIM对应的IMS业务相关用户信息、鉴权信息在存在ISIM application里， UMTS,LTE等鉴权信息在USIM application里， CDMA的鉴权信息在CSIM application里

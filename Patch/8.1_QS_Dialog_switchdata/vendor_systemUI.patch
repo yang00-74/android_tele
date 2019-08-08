@@ -1,0 +1,67 @@
+
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java b/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java
+index 940ff2e..5d04931 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/DataConnectionTile.java
+@@ -13,11 +13,13 @@ import android.os.RemoteException;
+ import android.os.ServiceManager;
+ import android.provider.Settings;
+ import android.provider.Settings.Global;
++import android.provider.SettingsEx;
+ import android.service.quicksettings.Tile;
+ import android.telecom.TelecomManager;
+ import android.telephony.SubscriptionInfo;
+ import android.telephony.SubscriptionManager;
+ import android.telephony.TelephonyManager;
++import android.telephony.TelephonyManagerEx;
+ import android.util.Log;
+ import android.view.LayoutInflater;
+ import android.view.View;
+@@ -46,6 +48,7 @@ import com.android.systemui.statusbar.policy.NetworkController;
+ import com.android.systemui.statusbar.policy.NetworkController.IconState;
+ import com.android.systemui.statusbar.policy.NetworkController.SignalCallback;
+ import com.android.systemui.statusbar.phone.StatusBar;
++import com.sprd.systemui.SimDataconnectSelect;
+ import com.sprd.systemui.SystemuiFeatureUtil;
+ 
+ import java.util.List;
+@@ -233,8 +236,11 @@ public class DataConnectionTile extends QSTileImpl<BooleanState> {
+                         .show();
+                 return;
+             }
+-
+-            if (isDefaultDataSimAvailable()) {
++            if (isDualSimDataAvailable()) {
++                Intent intent = new Intent(mContext, SimDataconnectSelect.class);
++                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++                mActivityStarter.postStartActivityDismissingKeyguard(intent, 0);
++            } else if (isDefaultDataSimAvailable()) {
+                 boolean enabled = !mTelephonyManager.getDataEnabled();
+                 toggleDataConnectionToDesired(enabled);
+                 handleRefreshState(!mState.value);
+@@ -242,6 +248,25 @@ public class DataConnectionTile extends QSTileImpl<BooleanState> {
+         }
+     }
+ 
++    private boolean isDualSimDataAvailable() {
++        boolean isDataAvailable = true;
++        int phoneCount = TelephonyManager.from(mContext).getPhoneCount();
++
++        for (int i = 0; i < phoneCount; i++) {
++            boolean isDataSimReady = SubscriptionManager
++                    .getSimStateForSlotIndex(i) == TelephonyManager.SIM_STATE_READY;
++            boolean isDataStandby = SubscriptionManager.isValidPhoneId(i)
++                    && TelephonyManagerEx.from(mContext).isSimEnabled(i);
++            Log.d(TAG, "Tony i = " + i + " isDataSimReady = "
++                    + isDataSimReady + " isDataStandby = " + isDataStandby);
++            isDataAvailable = isDataAvailable && (isDataSimReady && isDataStandby);
++        }
++
++        boolean bRadioBusy = (Settings.Global.getInt(mContext.getContentResolver(), SettingsEx.GlobalEx.RADIO_BUSY, 0) == 1);
++        return !bRadioBusy && isDataAvailable;
++    }
++
++
+     private void toggleDataConnectionToDesired(boolean enabled) {
+         mState.value = enabled;
+         mDataController.setMobileDataEnabled(enabled);

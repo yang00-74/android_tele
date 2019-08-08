@@ -1,0 +1,24 @@
+diff --git a/src/com/android/settings/ApnEditor.java b/src/com/android/settings/ApnEditor.java
+index 100e8c5..15338f0 100644
+--- a/src/com/android/settings/ApnEditor.java
++++ b/src/com/android/settings/ApnEditor.java
+@@ -626,6 +626,10 @@ public class ApnEditor extends SettingsPreferenceFragment
+             mIsEditable = ApnEditorUtils.getInstance(getContext()).getEditable(mCursor);
+             Log.d(TAG, "[fillUi] " + "mIsEditable:" + mIsEditable);
+             /* @} */
++            if (mCursor.getInt(EDITED_INDEX) == Telephony.Carriers.UNEDITED) {
++                mIsEditable = false;
++                Log.d(TAG, "preset apn:change mIsEditable=" + mIsEditable);
++            }
+         }
+ 
+         mName.setSummary(checkNull(mName.getText()));
+@@ -860,7 +864,7 @@ public class ApnEditor extends SettingsPreferenceFragment
+     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+         super.onCreateOptionsMenu(menu, inflater);
+         // If it's a new APN, then cancel will delete the new entry in onPause
+-        if (!mNewApn && (!mReadOnlyApn || mIsEditable)) {
++        if (!mNewApn && (!mReadOnlyApn && mIsEditable)) {
+             menu.add(0, MENU_DELETE, 0, R.string.menu_delete)
+                 .setIcon(R.drawable.ic_menu_delete);
+         }

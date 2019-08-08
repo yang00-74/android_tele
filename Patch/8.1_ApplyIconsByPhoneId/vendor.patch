@@ -1,0 +1,44 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java
+index ff51050..b9b71ab 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/TelephonyIconsEx.java
+@@ -28,6 +28,17 @@ public class TelephonyIconsEx {
+     public static final int ICON_CARRIER_NETWORK_CHANGE =
+             R.drawable.stat_sys_signal_carrier_network_change_animation;
+ 
++    public static final int SIM1_ICON_DATA_TYPE_2G = R.drawable.stat_sys_data_fully_connected_g;
++    public static final int SIM1_ICON_DATA_TYPE_3G = R.drawable.stat_sys_data_fully_connected_3g;
++    public static final int SIM1_ICON_DATA_TYPE_4G = R.drawable.stat_sys_data_fully_connected_4g;
++
++    public static final int SIM2_ICON_DATA_TYPE_2G = R.drawable.stat_sys_data_fully_connected_e;
++    public static final int SIM2_ICON_DATA_TYPE_3G = R.drawable.stat_sys_data_fully_connected_h;
++    public static final int SIM2_ICON_DATA_TYPE_4G = R.drawable.stat_sys_data_fully_connected_lte;
++
++    public static final int SIM1_ICON_VOLTE = R.drawable.stat_sys_hd_voice;
++    public static final int SIM2_ICON_VOLTE = R.drawable.stat_sys_volte;
++
+     /* SPRD: Bug 699665 add H+ icon. @{ */
+     static final MobileIconGroup HP = new MobileIconGroup(
+             "H+",
+@@ -61,5 +72,21 @@ public class TelephonyIconsEx {
+         ICON_SIGNAL_FOUR
+     };
+     /* @} */
++
++    public static final int[][] TELEPHONY_SIM_DATA_TYPE_ICONS = {
++            {   SIM1_ICON_DATA_TYPE_2G,
++                SIM1_ICON_DATA_TYPE_3G,
++                SIM1_ICON_DATA_TYPE_4G
++            },
++            {   SIM2_ICON_DATA_TYPE_2G,
++                SIM2_ICON_DATA_TYPE_3G,
++                SIM2_ICON_DATA_TYPE_4G
++            }
++    };
++
++    public static final int[] TELEPHONY_SIM_VOLTE_ICONS = {
++            SIM1_ICON_VOLTE,
++            SIM2_ICON_VOLTE
++    };
+ }
+ 

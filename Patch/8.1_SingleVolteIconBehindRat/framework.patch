@@ -1,0 +1,26 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+index b6c5a55..896d612 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+@@ -479,7 +479,9 @@ public class MobileSignalController extends SignalController<
+                     // Single Volte situation, so dual volte registration status must be false.
+                     mDualImsRegistered = false;
+                     mDualVolteRegistered = false;
+-
++                    int subId = mSubscriptionInfo.getSubscriptionId();
++                    int phoneId = mSubscriptionInfo.getSimSlotIndex();
++                    Log.d(mTag, " single volte phoneId=" + phoneId + " subId=" + subId);
+                     // SPRD: Bug 826505 add For VoWiFi icon refresh.
+                     refreshVoWiFiIndicators(isVoWiFiType, null); // Vowifi icon.
+                     /* SPRD: modify for bug655620 @{ */
+@@ -488,8 +490,8 @@ public class MobileSignalController extends SignalController<
+                          * mImsType : mImsType must be 0 (isVoLTEType must be true)
+                          * mIsVoLteEnable : main sim card IMS registered state.
+                          */
+-                        refreshVolteIndicators(isVoLTEType && mIsVoLteEnable,
+-                                SubscriptionManager.INVALID_SUBSCRIPTION_ID,
++                        refreshVolteIndicators(isVoLTEType && mIsVoLteEnable
++                                        && ImsManagerEx.isVoLTERegisteredForPhone(phoneId), subId,
+                                 TelephonyIconsEx.ICON_VOLTE, null);
+                     }
+                 // Dual Volte situation（DSDA and L+L）.

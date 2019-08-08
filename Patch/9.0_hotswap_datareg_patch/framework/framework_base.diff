@@ -1,0 +1,38 @@
+From 7e537d259d312e1f92b51827288b809898d2dc12 Mon Sep 17 00:00:00 2001
+From: vivi.li <Vivi.Li@unisoc.com>
+Date: Mon, 07 Jan 2019 16:50:23 +0800
+Subject: [PATCH] Bug #991486 When IccId has fetched then to create SubscriptionInfo
+
+[root cause  ]Create SubscriptionInfo to late
+[changes     ] When IccId has fetched then to create SubscriptionInfo
+[side effects] none
+[self test   ]:pass
+[download normally]:yes
+[power on/off normally]:yes
+[do common repository/branch inspection]:no
+[is there dependence]:no
+[confirm dependent commit]:none
+[board]:9.0
+[test case]:SubscriptionInfoUpdate
+[reviewers   ] daxing.cao
+[change_type ] AOB --> sprd_adaptation
+[tag_product ] common
+
+Change-Id: Ib2c228717a8769ef58059f4e97379b904d7a5aeb
+---
+
+diff --git a/telephony/java/com/android/internal/telephony/IccCardConstants.java b/telephony/java/com/android/internal/telephony/IccCardConstants.java
+index 74905a6..29f24c7 100644
+--- a/telephony/java/com/android/internal/telephony/IccCardConstants.java
++++ b/telephony/java/com/android/internal/telephony/IccCardConstants.java
+@@ -54,6 +54,10 @@
+     public static final String INTENT_VALUE_LOCKED_NETWORK = "NETWORK";
+     /* PERM_DISABLED means ICC is permanently disabled due to puk fails */
+     public static final String INTENT_VALUE_ABSENT_ON_PERM_DISABLED = "PERM_DISABLED";
++    /**
++     * @hide
++     */
++    public static final String INTENT_VALUE_ICCID_LOADED ="ICCID_LOADED";
+ 
+     /* Unisoc: Support Simlock @{ */
+     /* NS means ICC is locked on NETWORK SUBSET PERSONALIZATION */

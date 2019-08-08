@@ -1,0 +1,58 @@
+1.路径:
+    /packages/apps/CarrierConfig/assets/carrier_config_23430.xml
+   
+patch:
+    diff --git a/assets/carrier_config_23430.xml b/assets/carrier_config_23430.xml
+index 5345c97..48a39dd 100644
+--- a/assets/carrier_config_23430.xml
++++ b/assets/carrier_config_23430.xml
+@@ -12,6 +12,7 @@
+             <item value="23434" />
+             <item value="23486" />
+         </string-array>
++        <boolean name="carrier_default_data_roaming_enabled_bool" value="true" />
+     </carrier_config>
+     <carrier_config gid1="28000000">
+         <boolean name="carrier_name_override_bool" value="true" />
+  2.路径
+   /packages/apps/CarrierConfig/assets/carrier_config_23433.xml
+  
+patch:
+   diff --git a/assets/carrier_config_23433.xml b/assets/carrier_config_23433.xml
+index 5345c97..48a39dd 100644
+--- a/assets/carrier_config_23433.xml
++++ b/assets/carrier_config_23433.xml
+@@ -12,6 +12,7 @@
+             <item value="23434" />
+             <item value="23486" />
+         </string-array>
++        <boolean name="carrier_default_data_roaming_enabled_bool" value="true" />
+     </carrier_config>
+     <carrier_config gid1="28000000">
+         <boolean name="carrier_name_override_bool" value="true" />
+
+ 3.路径:
+/frameworks/opt/telephony/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+    
+patch:
+diff --git a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+index 2adb555..36c25e1 100644
+--- a/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
++++ b/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+@@ -2822,6 +2822,7 @@ public class DcTracker extends AbsDcTracker {
+                 mPhone.getContext().getSystemService(Context.CARRIER_CONFIG_SERVICE);
+         boolean isDataRoamingEnabled = "true".equalsIgnoreCase(SystemProperties.get(
+                 "ro.com.android.dataroaming", "false"));
++        log("SystemProperties isDataRoamingEnabled = " + isDataRoamingEnabled);
+         isDataRoamingEnabled |= configMgr.getConfigForSubId(mPhone.getSubId()).getBoolean(
+                 CarrierConfigManager.KEY_CARRIER_DEFAULT_DATA_ROAMING_ENABLED_BOOL);
+         return isDataRoamingEnabled;
+@@ -2835,7 +2836,7 @@ public class DcTracker extends AbsDcTracker {
+     private void setDefaultDataRoamingEnabled() {
+         // For single SIM phones, this is a per phone property.
+         String setting = Settings.Global.DATA_ROAMING;
+-        boolean useCarrierSpecificDefault = false;
++        boolean useCarrierSpecificDefault = true;
+         if (TelephonyManager.getDefault().getSimCount() != 1) {
+             setting = setting + mPhone.getSubId();
+             try {

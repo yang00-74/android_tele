@@ -1,0 +1,30 @@
+diff --git a/src/java/com/android/internal/telephony/DataEnableController.java b/src/java/com/android/internal/telephony/DataEnableController.java
+index cc79995..4af0482 100644
+--- a/src/java/com/android/internal/telephony/DataEnableController.java
++++ b/src/java/com/android/internal/telephony/DataEnableController.java
+@@ -120,7 +120,25 @@ public class DataEnableController extends ContextWrapper {
+     private void selectDataCardUpdate() {
+         int newSubId = SubscriptionManager.getDefaultDataSubscriptionId();
+         boolean isDataEnable = getDataEnable();
++        Log.d(TAG, "into selectDataCardUpdate old=" + mDefaultDataSubId + " new=" + newSubId);
++        int simCount = SubscriptionManager.from(mContext).getActiveSubscriptionInfoCount();
++        int preDataSlot = SubscriptionManager.getSlotIndex(mDefaultDataSubId);
++        int nowDataSlot = SubscriptionManager.getSlotIndex(newSubId);
++        Log.d(TAG, "pre=" + preDataSlot + " now= " + nowDataSlot);
+         if (newSubId != mDefaultDataSubId) {
++            if (simCount < 2) {
++                Log.d(TAG, "has remove old data card");
++                isDataEnable = false;
++                Settings.Global.putInt(mContext.getContentResolver(),
++                        Settings.Global.MOBILE_DATA + SubscriptionManager.MAX_SUBSCRIPTION_ID_VALUE,
++                        0);
++            } else if (preDataSlot == nowDataSlot){
++                Log.d(TAG, "has remove old data card and insert a new card");
++                isDataEnable = false;
++                Settings.Global.putInt(mContext.getContentResolver(),
++                        Settings.Global.MOBILE_DATA + SubscriptionManager.MAX_SUBSCRIPTION_ID_VALUE,
++                        0);
++            }
+             if (SubscriptionManager.isValidSubscriptionId(newSubId)) {
+                 mDefaultDataSubId = newSubId;
+             }

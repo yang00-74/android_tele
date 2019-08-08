@@ -1,0 +1,66 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+index b6c5a55..5d812cd 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+@@ -372,7 +372,9 @@ public class MobileSignalController extends SignalController<
+         }
+         mIsVolteIconShow = show;
+         mVolteIconForSubId = subId;
+-        mVolteIconResId = resId;
++        // mVolteIconResId = resId;
++        mVolteIconResId = getVolteIconBySubId(mSubscriptionInfo.getSubscriptionId());
++        Log.d(mTag, "asd send the volteiconId=" + mVolteIconResId);
+         if (mIsModemResetActive
+                 && !mIsVolteIconShow) {
+             Log.i(mTag, "modem reset and volte is disable");
+@@ -394,6 +396,16 @@ public class MobileSignalController extends SignalController<
+     }
+     /* @} */
+ 
++    private int getVolteIconBySubId(int subId) {
++        int phoneId = SubscriptionManager.getPhoneId(subId);
++        Log.d(mTag, "asd getVolteIconBySubId phoneId=" + phoneId);
++        if (phoneId == 0) {
++            return TelephonyIconsEx.TELEPHONY_SIM_VOLTE_ICONS[0];
++        } else {
++            return TelephonyIconsEx.TELEPHONY_SIM_VOLTE_ICONS[1];
++        }
++    }
++
+     /* SPRD: Bug 826505 add For VoWiFi icon refresh. @{ */
+     private void refreshVoWiFiIndicators(boolean show, SignalCallback callback) {
+         if (DEBUG) {
+@@ -777,6 +789,7 @@ public class MobileSignalController extends SignalController<
+                 typeIcon = TelephonyIcons.ICON_3G;
+             }
+         }
++        typeIcon = getDataTypeIconBySubId(mSubscriptionInfo.getSubscriptionId());
+         /* @} */
+         /* SPRD: Bug 697839 add For VOLTE and VoWiFi icon. @{ */
+         if (DEBUG) {
+@@ -800,6 +813,25 @@ public class MobileSignalController extends SignalController<
+         }
+     }
+ 
++    private int getDataTypeIconBySubId(int subscriptionId) {
++        int phoneId = SubscriptionManager.getPhoneId(subscriptionId);
++        Log.d("","asd getDataTypeIconBySubId phoneId="+phoneId);
++        switch (TelephonyManager.getNetworkClass(mDataNetType)) {
++            case TelephonyManager.NETWORK_CLASS_2_G:
++                return phoneId == 0 ? TelephonyIconsEx.TELEPHONY_SIM_DATA_TYPE_ICONS[0][0]
++                        : TelephonyIconsEx.TELEPHONY_SIM_DATA_TYPE_ICONS[1][0];
++            case TelephonyManager.NETWORK_CLASS_3_G:
++                return phoneId == 0 ? TelephonyIconsEx.TELEPHONY_SIM_DATA_TYPE_ICONS[0][1]
++                        : TelephonyIconsEx.TELEPHONY_SIM_DATA_TYPE_ICONS[1][1];
++            case TelephonyManager.NETWORK_CLASS_4_G:
++                return phoneId == 0 ? TelephonyIconsEx.TELEPHONY_SIM_DATA_TYPE_ICONS[0][2]
++                        : TelephonyIconsEx.TELEPHONY_SIM_DATA_TYPE_ICONS[1][2];
++            default:
++                return 0;
++        }
++
++    }
++
+     @Override
+     protected MobileState cleanState() {
+         return new MobileState();

@@ -1,0 +1,160 @@
+From 7d756894e7edede1a12b07de05f6528dbafa07b2 Mon Sep 17 00:00:00 2001
+From: nielei0720 <nielei0720@spreadst.com>
+Date: Fri, 25 May 2018 11:09:11 +0800
+Subject: [PATCH] Bug #875760 vadafone pre & post APN
+
+[root cause  ] vadafone pre & post APN
+[changes     ] vadafone pre & post APN
+[side effects] no
+[self test   ]: no
+[download normally]: no
+[power on/off normally]: no
+[do common repository/branch inspection]: no
+[is there dependence]: no
+[confirm dependent commit]: no
+[board]: 8.1
+[test case]: no
+[reviewers   ] no
+[change_type ] bugfix
+[tag_product ] common
+
+Change-Id: I64d3244181a2eb43cbe73a86aee8de9b551b1bba
+---
+
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 0b27174..cf8afef 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -24,6 +24,7 @@
+ 
+     <protected-broadcast android:name="com.android.stk.DIALOG_ALARM_TIMEOUT" />
+     <protected-broadcast android:name="android.intent.action.MAIN_MENU_ACCESS" />
++    <protected-broadcast android:name="android.intent.action.SHOW_APN_ADAPTE_ACTION" />
+     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+     <uses-permission android:name="android.permission.GET_TASKS"/>
+     <uses-permission android:name="android.permission.WAKE_LOCK" />
+diff --git a/src/com/android/stk/BootCompletedReceiver.java b/src/com/android/stk/BootCompletedReceiver.java
+index 4c6c262..a4341b8 100644
+--- a/src/com/android/stk/BootCompletedReceiver.java
++++ b/src/com/android/stk/BootCompletedReceiver.java
+@@ -29,6 +29,14 @@
+ import com.android.internal.telephony.PhoneConstants;
+ import com.android.internal.telephony.IccCardConstants;
+ 
++import android.content.SharedPreferences;
++import android.os.Handler;
++import android.os.Message;
++import com.android.internal.telephony.IccCardConstants.State;
++import com.android.internal.telephony.uicc.IccRecords;
++import com.android.internal.telephony.uicc.UiccController;
++import android.text.TextUtils;
++import android.content.ComponentName;
+ /**
+  * Boot completed receiver. used to reset the app install state every time the
+  * device boots.
+@@ -79,6 +87,83 @@
+         return false;
+     }
+ 
++    private Context mContext;
++    private static final int EVENT_UPDATE_APN = 4;
++    private boolean mHasAPNAdaptePrompt = false;
++    private static final String SHOW_APN_ADAPTE_ACTION = "android.intent.action.SHOW_APN_ADAPTE_ACTION";
++    public static final String PREFS_NAME = "iccid.before.apninfo";
++    public static final String SIM_ICC_ID = "icc_id";
++    private SharedPreferences mPreferences;
++    Handler mHandler = new Handler() {
++        @Override
++        public void handleMessage(Message msg) {
++
++            switch(msg.what){
++            case EVENT_UPDATE_APN:
++                Intent tempIntent = (Intent) msg.obj;
++                boolean isUsedBefore = isUsedBefore(mContext, tempIntent);
++                CatLog.d(this, "EVENT_UPDATE_APN isUsedBefore = " + isUsedBefore);
++                if (mContext != null && !isUsedBefore) {
++                    mHasAPNAdaptePrompt = true;
++                    Intent i = new Intent(SHOW_APN_ADAPTE_ACTION);
++                    i.setComponent(new ComponentName("com.android.settings",
++                            "com.android.settings.sim.ApnAdapteReceiver"));
++                    i.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
++                    mContext.sendBroadcast(i);
++                }
++                break;
++             default: break;
++            }
++
++        }
++    };
++
++    /**
++     * Store the current phone iccid to preference
++     *
++     * @parm phoneid phoneid
++     *
++     */
++    public void putIccCardId(Context context, int phoneid, String iccid) {
++        SharedPreferences.Editor editor = mPreferences.edit();
++        // No need care that the iccid is null
++        editor.putString(SIM_ICC_ID + phoneid, iccid);
++        editor.commit();
++    }
++
++    private boolean isUsedBefore(Context context, Intent intent) {
++        // set primary card phoneid as 0
++        int phoneId = 0; // intent.getIntExtra(IccCardConstants.INTENT_KEY_PHONE_ID,
++        // 0);
++        String iccId = getIccId(phoneId);
++
++        if (TextUtils.isEmpty(iccId))
++            return true; // if the card is invalid, not prompt dialog
++
++        mPreferences = mContext.getSharedPreferences(PREFS_NAME, 0);
++        String beforeIccId = mPreferences.getString(SIM_ICC_ID + phoneId, "");
++        CatLog.d(this, "phoneId:" + phoneId + ", iccId = " + iccId
++                + ", beforeIccId = " + beforeIccId);
++        if (!TextUtils.isEmpty(beforeIccId) && iccId.equals(beforeIccId)) {
++            return true;
++        } else {
++            putIccCardId(context, phoneId, iccId);
++            return false;
++        }
++    }
++
++    private String getIccId(int phoneId) {
++        String iccId = "";
++        UiccController uc = UiccController.getInstance();
++        if (uc != null) {
++            IccRecords iccRecords = uc.getIccRecords(phoneId,UiccController.APP_FAM_3GPP);
++            if (iccRecords != null) {
++                iccId = iccRecords.getIccId();
++            }
++        }
++        return iccId;
++    }
++
+     @Override
+     public void onReceive(Context context, Intent intent) {
+         String action = intent.getAction();
+@@ -87,12 +172,21 @@
+             return;
+         }
+ 
++        mContext = context;
++        mPreferences = mContext.getSharedPreferences(PREFS_NAME, 0);
+         // make sure the app icon is removed every time the device boots.
+         if (action.equals(Intent.ACTION_BOOT_COMPLETED)) {
+             Bundle args = new Bundle();
+             args.putInt(StkAppService.OPCODE, StkAppService.OP_BOOT_COMPLETED);
+             context.startService(new Intent(context, StkAppService.class)
+                     .putExtras(args));
++            CatLog.d(this, "Tony onReceive:start to apapte apn. mHasAPNAdaptePrompt = " + mHasAPNAdaptePrompt);
++            if (!mHasAPNAdaptePrompt) {
++                Message msg = new Message();
++                msg.what = EVENT_UPDATE_APN;
++                msg.obj = intent;
++                mHandler.sendMessageDelayed(msg, 0);
++            }
+             CatLog.d(LOG_TAG, "[ACTION_BOOT_COMPLETED]");
+         } else if (action.equals(Intent.ACTION_USER_INITIALIZE)) {
+             // TODO: http://b/25155491

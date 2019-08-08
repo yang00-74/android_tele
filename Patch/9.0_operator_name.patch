@@ -1,0 +1,42 @@
+diff --git a/packages/SystemUI/src/com/android/keyguard/CarrierText.java b/packages/SystemUI/src/com/android/keyguard/CarrierText.java
+index 2a492ea..fadb3e8 100644
+--- a/packages/SystemUI/src/com/android/keyguard/CarrierText.java
++++ b/packages/SystemUI/src/com/android/keyguard/CarrierText.java
+@@ -570,9 +570,21 @@ public class CarrierText extends TextView {
+ 
+     /* UNISOC: add for FEATURE bug698868 @{ */
+     public CharSequence appendRatToNetworkName(CharSequence operator) {
+-        CharSequence operatorName = TeleUtils.updateOperator(operator.toString(),
+-                "operator");
++       /* CharSequence operatorName = TeleUtils.updateOperator(operator.toString(),
++                "operator");*/
+         ServiceState state = mServiceState;
++        String tempMccmnc = null;
++        if (null != state) {
++            String operatorNumeric = state.getOperatorNumeric();
++            if (null != operatorNumeric && !("").equals(operatorNumeric)) {
++                tempMccmnc = operatorNumeric.substring(0, 3)
++                        + Integer.parseInt(operatorNumeric.substring(3));
++                Log.d(TAG, "tempMccmnc= " + tempMccmnc + ",will use numeric_to_operator array");
++            }
++        }
++        CharSequence operatorName = tempMccmnc != null ?
++                TeleUtils.updateOperator(tempMccmnc, "numeric_to_operator")
++                : TeleUtils.updateOperator(operator.toString(), "operator");
+         /* UNISOC: modify by BUG 601753 @{ */
+         String emergencyCall = mContext.getText(com.android.internal.R.string.emergency_calls_only).toString();
+ 
+@@ -583,8 +595,11 @@ public class CarrierText extends TextView {
+         if (state != null && state.getOperatorAlphaShort() != null
+                 && (operatorName.toString().equals(emergencyCall)
+                 || operatorName.toString().equals(noService)) && hasService()) {
+-            operatorName = TeleUtils.updateOperator(state.getOperatorAlphaShort(),
+-                    "operator");
++            /*operatorName = TeleUtils.updateOperator(state.getOperatorNumeric(),
++                    "operator");*/
++            operatorName = tempMccmnc != null ?
++                    TeleUtils.updateOperator(tempMccmnc, "numeric_to_operator")
++                    : TeleUtils.updateOperator(operator.toString(), "operator");
+             Log.d(TAG,"refresh operator name in service : " + operatorName);
+         }
+         /* @} */

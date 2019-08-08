@@ -1,0 +1,22 @@
+diff --git a/packages/SystemUI/res/values/config.xml b/packages/SystemUI/res/values/config.xml
+index c18c884..bc226f8 100644
+--- a/packages/SystemUI/res/values/config.xml
++++ b/packages/SystemUI/res/values/config.xml
+@@ -23,7 +23,7 @@
+     <!-- SPRD: Bug696307 - FEATURE_SHOW_LTE_TILE_IN_PANEL @{ -->
+     <string name="feature_system_extra_tile" translatable="false">plugin.sprd.systemuifeatures.qstile.SystemUIQsTileUtils</string>
+     <string name="quick_settings_tiles_default" translatable="false">
+-        wifi,bt,dnd,data,lte,lte2,vowifi,flashlight,rotation,battery,airplane,cast,audioprofile,location
++        volte1,volte2,wifi,bt,dnd,data,lte,lte2,vowifi,flashlight,rotation,battery,airplane,cast,audioprofile,location
+     </string>
+     <bool name="config_show_lte_tile">true</bool>
+     <!-- @} -->
+@@ -54,7 +54,7 @@
+     <string name="feature_audioprofile_systemui" translatable="false">plugin.sprd.systemuiaudioprofile.SystemUIAudioProfile</string>
+      <!-- SPRD 692442 Tiles native to System UI. Order should match "quick_settings_tiles_default" -->
+     <string name="quick_settings_tiles_stock" translatable="false">
+-        wifi,battery,dnd,data,lte,lte2,vowifi,flashlight,rotation,bt,airplane,location,hotspot,inversion,saver,work,cast,night,audioprofile
++        volte1,volte2,wifi,battery,dnd,data,lte,lte2,vowifi,flashlight,rotation,bt,airplane,location,hotspot,inversion,saver,work,cast,night,audioprofile
+     </string>
+     <!-- @} -->
+     <!-- SPRD: modify for bug688768 -->

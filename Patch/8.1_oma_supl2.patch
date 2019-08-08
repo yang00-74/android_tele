@@ -1,0 +1,54 @@
+diff --git a/src/java/com/android/internal/telephony/OmaApnReceiver.java b/src/java/com/android/internal/telephony/OmaApnReceiver.java
+index b189a42..73982e5 100644
+--- a/src/java/com/android/internal/telephony/OmaApnReceiver.java
++++ b/src/java/com/android/internal/telephony/OmaApnReceiver.java
+@@ -278,8 +278,9 @@ public class OmaApnReceiver extends BroadcastReceiver {
+                                         + " failed");
+                             }
+                         } else if (appBundle.getString("to-napid") != null) {
+-                            if (appBundle.getString("to-napid").equals(
+-                                    bundle.getString("napid"))) {
++                            if (appBundle.getString("to-napid").equals(bundle.getString("napid"))
++                                    || (appBundle.getString("to-napid").equals("INTERNET")
++                                    && bundle.containsKey("internet"))) {
+                                 Log.d(TAG, "appBundle" + i + " to-napid = "
+                                         + appBundle.getString("to-napid")
+                                         + " match" + " apnbundle napid = "
+@@ -314,6 +315,37 @@ public class OmaApnReceiver extends BroadcastReceiver {
+                                     }
+                                     putValuesToDatabase(contentValues, numeric,
+                                             uri);
++                                } else if (appBundle.getString("appid").equals("ap0004")) {
++                                    //APN type supl
++                                    Log.d(TAG,
++                                            "appBundle appid = "
++                                                    + appBundle.getString("appid")
++                                                    + " turn to supl type");
++                                    putContentValuesNull(contentValues);
++                                    validAndPut(contentValues,
++                                            Telephony.Carriers.TYPE, null,
++                                            "supl");
++                                    validAndPut(contentValues,
++                                            Telephony.Carriers.BEARER,
++                                            bundle, "bearer");
++                                    validAndPut(contentValues,
++                                            Telephony.Carriers.PROTOCOL,
++                                            appBundle, "addrtype");
++                                    validAndPut(contentValues,
++                                            Telephony.Carriers.ROAMING_PROTOCOL,
++                                            appBundle, "addrtype");
++
++                                    if (bundle.getString("napdef_name") != null) {
++                                        validAndPut(contentValues,
++                                                Telephony.Carriers.NAME,
++                                                bundle, "napdef_name");
++                                    } else {
++                                        validAndPut(contentValues,
++                                                Telephony.Carriers.NAME,
++                                                appBundle, "application_name");
++                                    }
++                                    putValuesToDatabase(contentValues, numeric,
++                                            uri);
+                                 } else {
+                                     // APN type default
+                                     Log.d(TAG,

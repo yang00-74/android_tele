@@ -1,0 +1,14 @@
+请完成下面三个patch的合入后验证功能，谢谢！
+1 Settings.diff
+  合入路径：packages/apps/Settings
+2 SprdStk.diff
+  合入路径：vendor/sprd/platform/packages/apps/SprdStk
+
+3 保证在属性plmns_esm_flag中删掉你相关的运营商sim卡mccmnc
+修改文件路径：vendor/sprd/platform/packages/apps/CarrierConfig/res/xml/vendor.xml
+
+例如去除运营商sim卡mccmnc=23415的情况
+ <boolean name="attach_apn_enable" value="true" />
+- <string name="plmns_esm_flag">00101,26001,23001,23003,21910,50501,50502,502156,27201,20404,21401,23430,23431,23432,23420,23415</string>
++ <string name="plmns_esm_flag">00101,26001,23001,23003,21910,50501,50502,502156,27201,20404,21401,23430,23431,23432,23420</string>
+

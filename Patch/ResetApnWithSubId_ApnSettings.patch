@@ -1,0 +1,65 @@
+diff --git a/src/com/android/settings/network/ApnEditor.java b/src/com/android/settings/network/ApnEditor.java
+index be095d5..eed3519 100644
+--- a/src/com/android/settings/network/ApnEditor.java
++++ b/src/com/android/settings/network/ApnEditor.java
+@@ -1091,6 +1091,7 @@ public class ApnEditor extends SettingsPreferenceFragment
+                 CARRIER_ENABLED_INDEX);
+ 
+         values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
++        values.put(Telephony.Carriers.SUBSCRIPTION_ID, mSubId);
+ 
+         if (callUpdate) {
+             final Uri uri = mApnData.getUri() == null ? mCarrierUri : mApnData.getUri();
+diff --git a/src/com/android/settings/network/ApnSettings.java b/src/com/android/settings/network/ApnSettings.java
+index 2b1f6ef..6d5e73d 100755
+--- a/src/com/android/settings/network/ApnSettings.java
++++ b/src/com/android/settings/network/ApnSettings.java
+@@ -121,6 +121,7 @@ public class ApnSettings extends RestrictedSettingsFragment implements
+     private ProgressDialog mDialog;
+     // UNISOC: add for bug709449
+     private Dialog mWarningDialog;
++    private int mSubId;
+ 
+     public ApnSettings() {
+         super(UserManager.DISALLOW_CONFIG_MOBILE_NETWORKS);
+@@ -169,6 +170,7 @@ public class ApnSettings extends RestrictedSettingsFragment implements
+         final Activity activity = getActivity();
+         final int subId = activity.getIntent().getIntExtra(SUB_ID,
+                 SubscriptionManager.INVALID_SUBSCRIPTION_ID);
++        mSubId = subId;
+ 
+         mMobileStateFilter = new IntentFilter(
+                 TelephonyIntents.ACTION_ANY_DATA_CONNECTION_STATE_CHANGED);
+@@ -351,8 +353,32 @@ public class ApnSettings extends RestrictedSettingsFragment implements
+             if (!mvnoApnList.isEmpty()) {
+                 mnoApnList = mvnoApnList;
+                 mnoMmsApnList = mvnoMmsApnList;
++                // update virtual operator apn`s sub_id in order to reset only this sim`s apn
++                new Thread(new Runnable() {
++                    @Override
++                    public void run() {
++                        String updateWhere = "numeric=? AND (mvno_type=? AND mvno_match_data=?)";
++                        ContentValues contentValues = new ContentValues();
++                        contentValues.put("sub_id",mSubId);
++                        getContentResolver().update(Telephony.Carriers.CONTENT_URI, contentValues,
++                                updateWhere, new String[]{mccmnc, mMvnoType, mMvnoMatchData});
++
++                    }
++                }).start();
+ 
+                 // Also save the mvno info
++            } else { // update operator apn`s sub_id in order to reset only this sim`s apn
++                new Thread(new Runnable() {
++                    @Override
++                    public void run() {
++                        String updateWhere = "numeric=" + mccmnc + " AND length(mvno_type) = 0";
++                        ContentValues contentValues = new ContentValues();
++                        contentValues.put("sub_id", mSubId);
++                        getContentResolver().update(Telephony.Carriers.CONTENT_URI, contentValues,
++                                updateWhere, null);
++                        Log.d(TAG, "fillList: mSubId = " + mSubId + " numeric = " + mccmnc);
++                    }
++                }).start();
+             }
+ 
+             for (Preference preference : mnoApnList) {

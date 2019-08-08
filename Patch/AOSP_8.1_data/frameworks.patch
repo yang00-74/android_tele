@@ -1,0 +1,59 @@
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java b/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java
+index 0b0f58b..a6207c5 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/CellularTile.java
+@@ -25,6 +25,8 @@ import android.content.pm.PackageManager;
+ import android.content.res.Resources;
+ import android.os.SystemProperties;
+ import android.service.quicksettings.Tile;
++import android.telephony.SubscriptionManager;
++import android.telephony.TelephonyManager;
+ import android.view.LayoutInflater;
+ import android.view.View;
+ import android.view.ViewGroup;
+@@ -32,6 +34,7 @@ import android.view.WindowManager.LayoutParams;
+ import android.widget.Switch;
+ import com.android.internal.logging.MetricsLogger;
+ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
++import com.android.internal.telephony.TeleUtils;
+ import com.android.settingslib.net.DataUsageController;
+ import com.android.systemui.Dependency;
+ import com.android.systemui.R;
+@@ -168,7 +171,12 @@ public class CellularTile extends QSTileImpl<SignalState> {
+         state.isOverlayIconWide = cb.isDataTypeIconWide;
+         state.overlayIconId = cb.dataTypeIconId;
+ 
+-        state.label = r.getString(R.string.mobile_data);
++        TelephonyManager telephonyManager = TelephonyManager.from(mContext);
++        int dataSubId = SubscriptionManager.getDefaultDataSubscriptionId();
++        String name = TeleUtils.updateOperator(telephonyManager
++                .getSimOperatorName(dataSubId), "spn");
++        state.label = null == name ? r.getString(R.string.mobile_data) : name;
++        // state.label = r.getString(R.string.mobile_data);
+ 
+         final String signalContentDesc = cb.enabled && (cb.mobileSignalIconId > 0)
+                 ? cb.signalContentDescription
+diff --git a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+index b6c5a55..6b187c0 100644
+--- a/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
++++ b/packages/SystemUI/src/com/android/systemui/statusbar/policy/MobileSignalController.java
+@@ -730,8 +730,17 @@ public class MobileSignalController extends SignalController<
+         if (mCurrentState.airplaneMode) {
+             return SignalDrawable.getAirplaneModeState(getNumLevels());
+         }
+-
+-        return getCurrentIconId();
++//        return getCurrentIconId();
++        if (mCurrentState.iconGroup == TelephonyIcons.CARRIER_NETWORK_CHANGE) {
++            return SignalDrawable.getCarrierChangeState(getNumLevels());
++        } else if (mCurrentState.connected) {
++            return SignalDrawable.getState(mCurrentState.level, getNumLevels(),
++                    +mCurrentState.inetCondition == 0);
++        } else if (mCurrentState.enabled) {
++            return SignalDrawable.getEmptyState(getNumLevels());
++        } else {
++            return 0;
++        }
+     }
+ 
+     @Override

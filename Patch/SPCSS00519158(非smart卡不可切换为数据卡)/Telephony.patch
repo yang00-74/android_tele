@@ -1,0 +1,33 @@
+diff --git a/src/com/android/phone/MobileNetworkSettings.java b/src/com/android/phone/MobileNetworkSettings.java
+index b4ed586..fc0e843 100644
+--- a/src/com/android/phone/MobileNetworkSettings.java
++++ b/src/com/android/phone/MobileNetworkSettings.java
+@@ -1368,6 +1368,8 @@ public class MobileNetworkSettings extends Activity  {
+             /* SPRD: bug 813021 @{ */
+             int currentTabSubId = mPhone.getSubId();
+             boolean hasActiveSub = hasActiveSubscriptions();
++            boolean isSmartCard = isSmartCard(currentTabSubId);
++            log("asd isSmartCard = " + isSmartCard);
+             /* SPRD: bug 830615 @{ */
+             boolean shouldEnableData = canSetData(currentTabSubId);
+             log("phoneSubId = " + subId + " defaultDataSubId = " + defaultDataSubId +
+@@ -1376,11 +1378,18 @@ public class MobileNetworkSettings extends Activity  {
+             if (currentTabSubId != defaultDataSubId && mMobileDataPref != null) {
+                 /* @}*/
+                 mMobileDataPref.setEnabled(isCallStateIdle() && hasActiveSub
+-                        && shouldEnableData);
++                        && shouldEnableData && isSmartCard);
++            } else {
++                mMobileDataPref.setEnabled(hasActiveSub && isSmartCard);
+             }
+         }
+         /* @} */
+ 
++        private boolean isSmartCard(int subId) {
++            String numeric = mTelephonyManager.getSimOperatorNumeric(subId);
++            return numeric.equals("51503") || numeric.equals("51505");
++        }
++
+         private boolean canSetData(int subId) {
+             SubscriptionInfo sir = mSubscriptionManager
+                     .getActiveSubscriptionInfo(subId);

@@ -1,0 +1,21 @@
+diff --git a/1.0/IExtRadio.hal b/1.0/IExtRadio.hal
+index 7edf450..5b351a2 100644
+--- a/1.0/IExtRadio.hal
++++ b/1.0/IExtRadio.hal
+@@ -120,4 +120,5 @@ interface IExtRadio extends android.hardware.radio@1.1::IRadio {
+     oneway vsimSendCmd(int32_t serial, int32_t phoneId, string cmd);
+     oneway getPreferredNetworkTypeExt(int32_t serial);
+     oneway setRadioPowerFallback(int32_t serial, bool enable);
++    oneway getICCID(int32_t serial);
+ };
+diff --git a/1.0/IExtRadioResponse.hal b/1.0/IExtRadioResponse.hal
+index be40e46..38d4dbb 100644
+--- a/1.0/IExtRadioResponse.hal
++++ b/1.0/IExtRadioResponse.hal
+@@ -197,4 +197,6 @@ interface IExtRadioResponse {
+     oneway getPreferredNetworkTypeExtResponse(RadioResponseInfo info, PreferredNetworkType nwType);
+ 
+     oneway setRadioPowerFallbackResponse(RadioResponseInfo info);
++
++    oneway getICCIDResponse(RadioResponseInfo info, string response);
+ };
